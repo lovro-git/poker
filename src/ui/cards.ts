@@ -1,7 +1,8 @@
-import { rankValue, suitOf, SUIT_SYMBOL, type Card } from "../engine/cards";
+import { rankValue, suitOf, type Card, type Suit } from "../engine/cards";
 import { h, icon } from "./dom";
 
 const RANK_LABEL: Record<number, string> = { 14: "A", 13: "K", 12: "Q", 11: "J", 10: "10" };
+const SUIT_FA: Record<Suit, string> = { c: "club", d: "diamond", h: "heart", s: "spade" };
 
 function rankLabel(card: Card): string {
   const v = rankValue(card);
@@ -35,9 +36,9 @@ export function cardEl(card: Card | null, opts: CardOpts = {}): HTMLElement {
     { class: cls.trim() },
     h("div", { class: "card-corner" },
       h("span", { class: "card-rank" }, rankLabel(card)),
-      h("span", { class: "card-csuit" }, SUIT_SYMBOL[suit]),
+      h("span", { class: "card-csuit" }, icon(SUIT_FA[suit])),
     ),
-    !opts.small && h("div", { class: "card-pip" }, SUIT_SYMBOL[suit]),
+    !opts.small && h("div", { class: "card-pip" }, icon(SUIT_FA[suit])),
   );
 }
 
