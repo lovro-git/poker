@@ -174,7 +174,7 @@ function ensureReleaseListeners() {
   const release = () => {
     if (!revealHeld) return;
     revealHeld = false;
-    document.querySelector(".my-cards.peekable")?.classList.remove("revealed");
+    document.querySelectorAll(".peekable").forEach((el) => el.classList.remove("revealed"));
   };
   for (const ev of ["pointerup", "touchend", "touchcancel", "pointercancel", "mouseup", "blur"]) {
     window.addEventListener(ev, release);
@@ -244,9 +244,9 @@ function avatarColor(name: string): string {
   return `hsl(${hash % 360} 52% 46%)`;
 }
 
-/** A seat pod on the felt: a round avatar with name + chips. Your own hole cards
- *  live in the footer; opponents' cards fan out behind the avatar at showdown. */
-function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
+/** A seat pod on the felt: a round avatar with name + chips. Opponents' cards fan
+ *  behind the avatar; in table view your own cards sit peekable at your seat. */
+function seatPod(view: ClientView, i: number, winSet: Set<Card>, animHole: boolean): HTMLElement {
   const seat = view.seats[i];
   if (!seat) return h("div", { class: "pod avatar-pod is-empty" }, h("div", { class: "av av-empty" }));
 
@@ -258,10 +258,12 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   const cls = ["pod", "avatar-pod", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner", !seat.connected && "is-off"]
     .filter(Boolean).join(" ");
 
-  // Fan opponents' cards behind the avatar (face-down mid-hand, revealed at showdown).
+  // Opponents' cards fan behind the avatar; your own are peekable at your seat.
   const faces = seat.holeCards && !seat.mucked;
   let cards: HTMLElement | null = null;
-  if (dealt && !isMe) {
+  if (isMe && seat.holeCards) {
+    cards = peekCards(seat.holeCards, seat.status === "folded", animHole, "seat-cards");
+  } else if (dealt && !isMe) {
     const cardEls = faces
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
       : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];
@@ -477,72 +479,74 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
   return h("div", { class: "controls" }, row, raiseControls);
 }
 
-// --- My cards + bar (bottom-right) -----------------------------------------
+// --- My cards (peekable) + secondary buttons -------------------------------
 
+/** Your hole cards as a hold/tap-to-peek element. `wrap` sizes them (footer vs seat). */
+function peekCards(cards: readonly Card[], folded: boolean, animHole: boolean, wrap: string): HTMLElement {
+  const mode = getReveal();
+  const el = h("div", { class: `${wrap} peekable` },
+    ...cards.map((c) => flipCard(c, { big: true, dim: folded, anim: animHole })),
+    h("div", { class: "peek-hint" }, mode === "tap" ? "tap to reveal" : "hold to peek"),
+  );
+  if (revealHeld || revealToggled) el.classList.add("revealed");
+  el.addEventListener("contextmenu", (e) => e.preventDefault());
+  if (mode === "tap") {
+    el.addEventListener("click", () => {
+      revealToggled = !revealToggled;
+      el.classList.toggle("revealed", revealToggled);
+    });
+  } else {
+    const hold = (e: Event) => { e.preventDefault(); revealHeld = true; el.classList.add("revealed"); };
+    el.addEventListener("touchstart", hold, { passive: false });
+    el.addEventListener("mousedown", hold);
+    ensureReleaseListeners();
+  }
+  return el;
+}
+
+/** Muck / show / rebuy / I'm-back buttons for the local player. */
+function myButtons(view: ClientView, hs: TableHandlers): HTMLElement[] {
+  const seat = view.yourSeat >= 0 ? view.seats[view.yourSeat] : null;
+  const buttons: HTMLElement[] = [];
+  if (!seat) return buttons;
+  if (seat.afk) {
+    const back = h("button", { class: "mini-btn on", type: "button" }, "I'm back");
+    back.onclick = () => hs.sitOut(false);
+    buttons.push(back);
+  }
+  if (view.stage === "showdown" && (seat.status === "active" || seat.status === "allin")) {
+    if (view.result?.wentToShowdown && !seat.mucked) {
+      const b = h("button", { class: "mini-btn", type: "button" }, "Muck");
+      b.onclick = () => hs.show(false);
+      buttons.push(b);
+    } else if (!view.result?.wentToShowdown && view.result?.pots.some((p) => p.winners.includes(view.yourSeat)) && !seat.revealVoluntary && !seat.holeCards) {
+      const b = h("button", { class: "mini-btn", type: "button" }, "Show cards");
+      b.onclick = () => hs.show(true);
+      buttons.push(b);
+    }
+  }
+  if (view.config.format === "cash" && seat.chips < view.config.buyIn && view.stage !== "preflop" && view.stage !== "flop" && view.stage !== "turn" && view.stage !== "river") {
+    const b = h("button", { class: "mini-btn on", type: "button" }, seat.chips <= 0 ? "Rebuy" : "Top up");
+    b.onclick = () => hs.rebuy();
+    buttons.push(b);
+  }
+  return buttons;
+}
+
+/** Big my-cards + name/chips block — used in the LIST layout footer. */
 function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLElement {
   const seat = view.yourSeat >= 0 ? view.seats[view.yourSeat] : null;
   const dealt = seat && (seat.status === "active" || seat.status === "allin" || seat.status === "folded");
 
   let cardsEl: HTMLElement;
   if (seat?.holeCards) {
-    const folded = seat.status === "folded";
-    // Hidden by default; reveal by holding (default) or tapping, per settings.
-    const mode = getReveal();
-    const el = h("div", { class: "my-cards peekable" },
-      ...seat.holeCards.map((c) => flipCard(c, { big: true, dim: folded, anim: animHole })),
-      h("div", { class: "peek-hint" }, mode === "tap" ? "tap to reveal" : "hold to peek"),
-    );
-    // Re-apply reveal state (survives re-renders on another player's turn).
-    if (revealHeld || revealToggled) el.classList.add("revealed");
-    el.addEventListener("contextmenu", (e) => e.preventDefault());
-    if (mode === "tap") {
-      el.addEventListener("click", () => {
-        revealToggled = !revealToggled;
-        el.classList.toggle("revealed", revealToggled);
-      });
-    } else {
-      // Hold: start on touch/mouse; release is handled globally (below) so lifting
-      // your finger still works even if the element was rebuilt mid-hold.
-      const hold = (e: Event) => { e.preventDefault(); revealHeld = true; el.classList.add("revealed"); };
-      el.addEventListener("touchstart", hold, { passive: false });
-      el.addEventListener("mousedown", hold);
-      ensureReleaseListeners();
-    }
-    cardsEl = el;
+    cardsEl = peekCards(seat.holeCards, seat.status === "folded", animHole, "my-cards");
   } else if (dealt) {
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, faceDown: true }), cardEl(null, { big: true, faceDown: true }));
   } else if (seat) {
-    // Seated but not in this hand — show empty card outlines, not text.
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, slot: true }), cardEl(null, { big: true, slot: true }));
   } else {
     cardsEl = h("div", { class: "my-cards" }, h("span", { class: "placeholder" }, "Spectating"));
-  }
-
-  const buttons: HTMLElement[] = [];
-  if (seat?.afk) {
-    const back = h("button", { class: "mini-btn on", type: "button" }, "I'm back");
-    back.onclick = () => hs.sitOut(false);
-    buttons.push(back);
-  }
-  if (seat) {
-    // Showdown muck / show controls.
-    if (view.stage === "showdown" && (seat.status === "active" || seat.status === "allin")) {
-      if (view.result?.wentToShowdown && !seat.mucked) {
-        const b = h("button", { class: "mini-btn", type: "button" }, "Muck");
-        b.onclick = () => hs.show(false);
-        buttons.push(b);
-      } else if (!view.result?.wentToShowdown && view.result?.pots.some((p) => p.winners.includes(view.yourSeat)) && !seat.revealVoluntary && !seat.holeCards) {
-        const b = h("button", { class: "mini-btn", type: "button" }, "Show cards");
-        b.onclick = () => hs.show(true);
-        buttons.push(b);
-      }
-    }
-    // Rebuy when short (cash only, between hands).
-    if (view.config.format === "cash" && seat.chips < view.config.buyIn && view.stage !== "preflop" && view.stage !== "flop" && view.stage !== "turn" && view.stage !== "river") {
-      const b = h("button", { class: "mini-btn on", type: "button" }, seat.chips <= 0 ? "Rebuy" : "Top up");
-      b.onclick = () => hs.rebuy();
-      buttons.push(b);
-    }
   }
 
   return h("div", { class: "mine" },
@@ -550,7 +554,7 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
     h("div", { class: "my-bar" },
       seat ? h("span", { class: "my-name" }, seat.name) : null,
       seat ? h("span", { class: "my-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))) : null,
-      ...buttons,
+      ...myButtons(view, hs),
     ),
   );
 }
@@ -601,7 +605,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
       const dx = 50 - left, dy = 44 - top;
       const len = Math.hypot(dx, dy) || 1;
       const style = `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;--ux:${(dx / len).toFixed(3)};--uy:${(dy / len).toFixed(3)}`;
-      arena.append(h("div", { class: "seat", style }, seatPod(view, i, winSet)));
+      arena.append(h("div", { class: "seat", style }, seatPod(view, i, winSet, animHole)));
     }
     body = arena;
   }
@@ -617,6 +621,19 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   const leaveBtn = h("button", { class: "leave-btn", type: "button" }, icon("right-from-bracket"), h("span", { class: "leave-txt" }, "Leave"));
   leaveBtn.onclick = () => hs.leave();
 
+  // Table view: slim footer with just the action controls (your cards live at your
+  // seat). List view: the full footer with your big cards.
+  const footer =
+    layout === "list"
+      ? h("div", { class: "footer" }, controls(view, ui, hs), mine(view, hs, animHole))
+      : (() => {
+          const btns = myButtons(view, hs);
+          return h("div", { class: "footer footer--table" },
+            controls(view, ui, hs),
+            btns.length ? h("div", { class: "my-actions" }, ...btns) : null,
+          );
+        })();
+
   clear(root).append(
     h("div", { class: "table-screen" },
       h("div", { class: "topbar" },
@@ -628,7 +645,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         leaveBtn,
       ),
       body,
-      h("div", { class: "footer" }, controls(view, ui, hs), mine(view, hs, animHole)),
+      footer,
     ),
   );
 }

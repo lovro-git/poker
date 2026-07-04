@@ -49,12 +49,12 @@ describe("renderTable — oval table structure", () => {
     expect(style).toMatch(/top:86\.00%/);
   });
 
-  it("does not render the local player's hole cards on the felt (they live in the footer)", () => {
+  it("renders your own cards at your seat in table view, with a slim footer", () => {
     const root = document.createElement("div");
     renderTable(root, viewWith(3, 6), freshUI(), handlers);
     const mePod = root.querySelector(".pod.is-me")!;
-    expect(mePod.querySelector(".pod-cards")).toBeNull(); // no cards in my oval pod
-    expect(root.querySelector(".footer .my-cards")).not.toBeNull(); // cards are in the footer
+    expect(mePod.querySelector(".seat-cards")).not.toBeNull(); // my cards at my seat
+    expect(root.querySelector(".footer .my-cards")).toBeNull(); // no big card block in table footer
   });
 
   it("renders the waiting state (single player) with an idle footer", () => {

@@ -752,20 +752,39 @@ input:focus-visible {
   z-index: 2;
 }
 /* opponents' cards fan out behind the avatar */
+/* opponents' cards peek above the avatar (never over the name/chips) */
 .avatar-pod .pod-cards {
   position: absolute;
-  bottom: calc(var(--av-size) * 0.6);
+  top: 0;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -62%);
   display: flex;
   gap: 0;
   z-index: 0;
 }
 .avatar-pod .pod-cards .card:first-child {
-  transform: rotate(-12deg) translateX(30%);
+  transform: rotate(-12deg) translateX(32%);
 }
 .avatar-pod .pod-cards .card:last-child {
-  transform: rotate(12deg) translateX(-30%);
+  transform: rotate(12deg) translateX(-32%);
+}
+/* your own cards at your seat: bigger, peekable, above your avatar */
+.avatar-pod .seat-cards {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -66%);
+  z-index: 0;
+  display: flex;
+  gap: 3px;
+  --card-big-w: clamp(36px, 7.5vw, 56px);
+}
+.avatar-pod .seat-cards .peek-hint {
+  display: none;
+}
+.avatar-pod.is-acting .seat-cards,
+.avatar-pod .seat-cards {
+  z-index: 5; /* keep your cards tappable above the avatar */
 }
 .pod-name {
   display: flex;
@@ -1108,6 +1127,20 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 9px;
+}
+/* Table view: slim footer — controls centered, no big my-cards block. */
+.footer--table {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.footer--table .controls {
+  margin: 0 auto;
+}
+.my-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
 }
 .mine {
   margin-left: auto; /* push my cards to the far bottom-right */
