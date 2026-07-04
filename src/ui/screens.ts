@@ -192,8 +192,8 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
     .filter(Boolean).join(" ");
 
   const faces = seat.holeCards && !isMe && !seat.mucked;
-  const cardEls = !dealt
-    ? [h("span", { class: "pl-nocards" }, "")]
+  const cardEls: HTMLElement[] = !dealt
+    ? [] // not in this hand — no card placeholder, keep the pod compact
     : faces
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
       : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];
@@ -204,8 +204,8 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
   if (seat.isBB) badges.push("BB");
 
   return h("div", { class: cls },
-    h("div", { class: "pl-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))),
-    h("div", { class: "pl-cards" }, ...cardEls),
+    badges.length ? h("div", { class: "pl-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
+    cardEls.length ? h("div", { class: "pl-cards" }, ...cardEls) : null,
     h("div", { class: "pl-info" },
       h("div", { class: "pl-name" },
         !seat.connected && h("span", { class: "pl-off", title: "Disconnected" }, "●"),

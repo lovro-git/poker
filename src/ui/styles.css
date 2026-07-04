@@ -722,6 +722,7 @@ input:focus-visible {
 
 .dock {
   display: flex;
+  flex: none;
   align-items: flex-end;
   gap: clamp(10px, 3vw, 40px);
   padding: 12px clamp(10px, 2vw, 24px) 16px;
@@ -1000,6 +1001,11 @@ input:focus-visible {
     flex-direction: column;
     gap: 10px;
     padding: 10px;
+    overflow-y: auto; /* scroll the table area instead of overlapping the dock */
+    -webkit-overflow-scrolling: touch;
+  }
+  .dock {
+    flex: none; /* keep the action dock a fixed block at the bottom */
   }
 
   /* players in a fixed 3-across grid (6 max -> 2 rows) */
