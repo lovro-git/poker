@@ -178,25 +178,38 @@ function playerActionCell(view: ClientView, i: number, seat: PublicSeat): Node |
   return null;
 }
 
-function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
+/** Position a seat as a percentage around an ellipse; you sit at the bottom. */
+function seatStyle(relPos: number, total: number): string {
+  // Flattened ellipse (wider than tall) so top/bottom pods clear the edges.
+  const angle = Math.PI / 2 + (relPos / total) * Math.PI * 2;
+  const cx = 50, cy = 50, rx = 45, ry = 39;
+  const left = cx + rx * Math.cos(angle);
+  const top = cy + ry * Math.sin(angle);
+  return `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%`;
+}
+
+/** A seat pod on the felt. Your own hole cards live in the footer, not here. */
+function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   const seat = view.seats[i];
-  if (!seat) return h("div", { class: "pl-row is-open" }, h("span", { class: "pl-openseat" }, "Open seat"));
+  if (!seat) return h("div", { class: "pod pod-empty" }, "Open");
 
   const isMe = i === view.yourSeat;
   const acting = view.stage !== "showdown" && view.toActSeat === i;
   const isWinner = view.stage === "showdown" && !!view.result?.pots.some((p) => p.winners.includes(i));
   const dealt = seat.status === "active" || seat.status === "allin" || seat.status === "folded";
-  // Grey out anyone out of the action: folded, or seated but not in this hand.
   const inactive = !dealt || seat.status === "folded";
-  const cls = ["pl-row", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
+  const cls = ["pod", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
     .filter(Boolean).join(" ");
 
-  const faces = seat.holeCards && !isMe && !seat.mucked;
-  const cardEls: HTMLElement[] = !dealt
-    ? [] // not in this hand — no card placeholder, keep the pod compact
-    : faces
+  // Others' cards are shown on the felt; yours are in the footer.
+  let cards: HTMLElement | null = null;
+  if (dealt && !isMe) {
+    const faces = seat.holeCards && !seat.mucked;
+    const cardEls = faces
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
       : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];
+    cards = h("div", { class: "pod-cards" }, ...cardEls);
+  }
 
   const badges: string[] = [];
   if (seat.isButton) badges.push("D");
@@ -204,19 +217,17 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
   if (seat.isBB) badges.push("BB");
 
   return h("div", { class: cls },
-    badges.length ? h("div", { class: "pl-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
-    cardEls.length ? h("div", { class: "pl-cards" }, ...cardEls) : null,
-    h("div", { class: "pl-info" },
-      h("div", { class: "pl-name" },
-        !seat.connected && h("span", { class: "pl-off", title: "Disconnected" }, "●"),
+    badges.length ? h("div", { class: "pod-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
+    cards,
+    h("div", { class: "pod-body" },
+      h("div", { class: "pod-name" },
+        !seat.connected && h("span", { class: "pod-off", title: "Disconnected" }, "●"),
         seat.name + (isMe ? " (you)" : ""),
       ),
-      h("div", { class: "pl-chips tnum" }, chips(seat.chips), h("span", { class: "pl-chip-u" }, " chips")),
-    ),
-    h("div", { class: "pl-act" },
-      seat.committedRound > 0 && chipBadge(seat.committedRound),
+      h("div", { class: "pod-chips tnum" }, chips(seat.chips)),
       playerActionCell(view, i, seat),
     ),
+    seat.committedRound > 0 ? h("div", { class: "pod-bet" }, chipBadge(seat.committedRound)) : null,
   );
 }
 
@@ -390,12 +401,11 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
     cardsEl = h("div", { class: "my-cards" }, h("span", { class: "placeholder" }, "Spectating"));
   }
 
-  const bar = h("div", { class: "my-bar" });
+  const buttons: HTMLElement[] = [];
   if (seat?.afk) {
-    // Timed out — offer to come back in.
     const back = h("button", { class: "mini-btn on", type: "button" }, "I'm back");
     back.onclick = () => hs.sitOut(false);
-    bar.append(back);
+    buttons.push(back);
   }
   if (seat) {
     // Showdown muck / show controls.
@@ -403,27 +413,27 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
       if (view.result?.wentToShowdown && !seat.mucked) {
         const b = h("button", { class: "mini-btn", type: "button" }, "Muck");
         b.onclick = () => hs.show(false);
-        bar.append(b);
+        buttons.push(b);
       } else if (!view.result?.wentToShowdown && view.result?.pots.some((p) => p.winners.includes(view.yourSeat)) && !seat.revealVoluntary && !seat.holeCards) {
         const b = h("button", { class: "mini-btn", type: "button" }, "Show cards");
         b.onclick = () => hs.show(true);
-        bar.append(b);
+        buttons.push(b);
       }
     }
     // Rebuy when short (cash only, between hands).
     if (view.config.format === "cash" && seat.chips < view.config.buyIn && view.stage !== "preflop" && view.stage !== "flop" && view.stage !== "turn" && view.stage !== "river") {
       const b = h("button", { class: "mini-btn on", type: "button" }, seat.chips <= 0 ? "Rebuy" : "Top up");
       b.onclick = () => hs.rebuy();
-      bar.append(b);
+      buttons.push(b);
     }
   }
 
   return h("div", { class: "mine" },
     cardsEl,
     h("div", { class: "my-bar" },
-      seat && h("span", { class: "my-name" }, seat.name),
-      seat && h("span", { class: "my-chips tnum" }, chips(seat.chips)),
-      bar,
+      seat ? h("span", { class: "my-name" }, seat.name) : null,
+      seat ? h("span", { class: "my-chips tnum" }, chips(seat.chips)) : null,
+      ...buttons,
     ),
   );
 }
@@ -441,18 +451,20 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   ui.prevBoardLen = view.board.length;
   ui.prevHand = view.handNumber;
 
-  // All seats (empty ones fill out the 3-across grid on mobile).
-  const players = h("div", { class: "players" },
-    h("div", { class: "players-head" }, "Players"),
-    ...view.seats.map((_, i) => playerRow(view, i, winSet)),
-  );
-
-  const tableMain = h("div", { class: "table-main" },
+  // Felt arena: green oval, center (pot + board + status), seats around the edge.
+  const center = h("div", { class: "center" },
     h("div", { class: "pot" }, h("span", { class: "chipbadge-dot" }), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString())),
     community(view, winSet, animFrom),
     h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? ""),
     h("div", { class: "msg" }, centerMessage(view)),
   );
+  const arena = h("div", { class: "arena" }, h("div", { class: "felt" }), center);
+  const total = view.config.maxSeats;
+  const anchor = view.yourSeat >= 0 ? view.yourSeat : 0;
+  for (let i = 0; i < total; i++) {
+    const relPos = (i - anchor + total) % total;
+    arena.append(h("div", { class: "seat", style: seatStyle(relPos, total) }, seatPod(view, i, winSet)));
+  }
 
   const blinds = `${view.smallBlind}/${view.bigBlind}`;
   const meta = `${view.config.format === "tournament" ? "Tournament" : "Cash"} · blinds ${blinds}`;
@@ -475,8 +487,8 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         themeToggle("icon-btn"),
         leaveBtn,
       ),
-      h("div", { class: "stage-wrap" }, players, tableMain),
-      h("div", { class: "dock" }, controls(view, ui, hs), mine(view, hs, animHole)),
+      arena,
+      h("div", { class: "footer" }, controls(view, ui, hs), mine(view, hs, animHole)),
     ),
   );
 }

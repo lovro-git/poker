@@ -63,6 +63,15 @@ function decode(payload: Uint8Array): unknown {
   }
 }
 
+/** A secret-free clone for persistence: no deck, no hole cards. */
+function sanitize(state: GameState): GameState {
+  return {
+    ...state,
+    deck: [],
+    seats: state.seats.map((s) => (s ? { ...s, holeCards: null } : null)),
+  };
+}
+
 // --- Host ------------------------------------------------------------------
 
 class HostClient implements Client {
@@ -240,10 +249,14 @@ class HostClient implements Client {
   }
 
   private persist() {
+    // Never write secrets to disk. Only snapshot between hands, and strip the
+    // deck (all future board cards) and every hole card, so reopening the host
+    // can't reveal upcoming or hidden cards.
+    if (isHandInProgress(this.state)) return;
     try {
       localStorage.setItem(
         stateKey(this.roomKey),
-        JSON.stringify({ state: this.state, me: this.me }),
+        JSON.stringify({ state: sanitize(this.state), me: this.me }),
       );
     } catch {
       /* storage full / disabled — non-fatal */
@@ -349,6 +362,15 @@ export function resumeHost(roomKey: string, me: Identity): Client | null {
   if (!raw) return null;
   try {
     const { state } = JSON.parse(raw) as { state: GameState };
+    // Defensive: a persisted snapshot should already be between-hands and
+    // secret-free, but coerce to a safe idle state so no stale hand resumes.
+    if (isHandInProgress(state)) {
+      state.stage = "waiting";
+      state.toActSeat = -1;
+      state.result = null;
+    }
+    state.deck = [];
+    for (const s of state.seats) if (s) s.holeCards = null;
     return new HostClient(roomKey, me, state.config, state);
   } catch {
     return null;
