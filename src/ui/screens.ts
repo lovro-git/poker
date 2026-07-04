@@ -1,7 +1,7 @@
 import type { Card } from "../engine/cards";
 import type { Format, PlayerAction } from "../engine/types";
 import { cardEl, chipBadge, flipCard } from "./cards";
-import { chips, clear, h, icon, themeToggle } from "./dom";
+import { chips, clear, getLayout, h, icon, themeToggle } from "./dom";
 import type { ClientView, PublicSeat } from "../net/protocol";
 
 // --- Lobby -----------------------------------------------------------------
@@ -130,6 +130,7 @@ export interface TableHandlers {
   start(): void;
   copyLink(): void;
   leave(): void;
+  toggleLayout(): void;
 }
 
 export interface UIState {
@@ -180,9 +181,9 @@ function playerActionCell(view: ClientView, i: number, seat: PublicSeat): Node |
 
 /** Position a seat as a percentage around an ellipse; you sit at the bottom. */
 function seatStyle(relPos: number, total: number): string {
-  // Flattened ellipse (wider than tall) so top/bottom pods clear the edges.
+  // Flattened ellipse; keep radii modest so pods don't clip the screen edges.
   const angle = Math.PI / 2 + (relPos / total) * Math.PI * 2;
-  const cx = 50, cy = 50, rx = 45, ry = 39;
+  const cx = 50, cy = 50, rx = 40, ry = 40;
   const left = cx + rx * Math.cos(angle);
   const top = cy + ry * Math.sin(angle);
   return `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%`;
@@ -228,6 +229,48 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
       playerActionCell(view, i, seat),
     ),
     seat.committedRound > 0 ? h("div", { class: "pod-bet" }, chipBadge(seat.committedRound)) : null,
+  );
+}
+
+/** A player row for the list/grid layout (alternative to the oval). */
+function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
+  const seat = view.seats[i];
+  if (!seat) return h("div", { class: "pl-row is-open" }, h("span", { class: "pl-openseat" }, "Open seat"));
+
+  const isMe = i === view.yourSeat;
+  const acting = view.stage !== "showdown" && view.toActSeat === i;
+  const isWinner = view.stage === "showdown" && !!view.result?.pots.some((p) => p.winners.includes(i));
+  const dealt = seat.status === "active" || seat.status === "allin" || seat.status === "folded";
+  const inactive = !dealt || seat.status === "folded";
+  const cls = ["pl-row", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
+    .filter(Boolean).join(" ");
+
+  const faces = seat.holeCards && !isMe && !seat.mucked;
+  const cardEls: HTMLElement[] = !dealt
+    ? []
+    : faces
+      ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
+      : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];
+
+  const badges: string[] = [];
+  if (seat.isButton) badges.push("D");
+  if (seat.isSB) badges.push("SB");
+  if (seat.isBB) badges.push("BB");
+
+  return h("div", { class: cls },
+    badges.length ? h("div", { class: "pl-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
+    cardEls.length ? h("div", { class: "pl-cards" }, ...cardEls) : null,
+    h("div", { class: "pl-info" },
+      h("div", { class: "pl-name" },
+        !seat.connected && h("span", { class: "pl-off", title: "Disconnected" }, "●"),
+        seat.name + (isMe ? " (you)" : ""),
+      ),
+      h("div", { class: "pl-chips" }, icon("coins"), h("span", { class: "tnum" }, chips(seat.chips))),
+    ),
+    h("div", { class: "pl-act" },
+      seat.committedRound > 0 && chipBadge(seat.committedRound),
+      playerActionCell(view, i, seat),
+    ),
   );
 }
 
@@ -462,19 +505,31 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   ui.prevBoardLen = view.board.length;
   ui.prevHand = view.handNumber;
 
-  // Felt arena: green oval, center (pot + board + status), seats around the edge.
-  const center = h("div", { class: "center" },
-    h("div", { class: "pot" }, icon("coins"), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString())),
-    community(view, winSet, animFrom),
-    h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? ""),
-    h("div", { class: "msg" }, centerMessage(view)),
-  );
-  const arena = h("div", { class: "arena" }, h("div", { class: "felt" }), center);
-  const total = view.config.maxSeats;
-  const anchor = view.yourSeat >= 0 ? view.yourSeat : 0;
-  for (let i = 0; i < total; i++) {
-    const relPos = (i - anchor + total) % total;
-    arena.append(h("div", { class: "seat", style: seatStyle(relPos, total) }, seatPod(view, i, winSet)));
+  const pot = () => h("div", { class: "pot" }, icon("coins"), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString()));
+  const stageLabel = () => h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? "");
+  const msg = () => h("div", { class: "msg" }, centerMessage(view));
+
+  const layout = getLayout();
+  let body: HTMLElement;
+  if (layout === "list") {
+    // Old list/grid layout.
+    const players = h("div", { class: "players" },
+      h("div", { class: "players-head" }, "Players"),
+      ...view.seats.map((_, i) => playerRow(view, i, winSet)),
+    );
+    const tableMain = h("div", { class: "table-main" }, pot(), community(view, winSet, animFrom), stageLabel(), msg());
+    body = h("div", { class: "stage-wrap" }, players, tableMain);
+  } else {
+    // Green-felt oval: pot + board in the center, seats around the edge.
+    const center = h("div", { class: "center" }, pot(), community(view, winSet, animFrom), stageLabel(), msg());
+    const arena = h("div", { class: "arena" }, h("div", { class: "felt" }), center);
+    const total = view.config.maxSeats;
+    const anchor = view.yourSeat >= 0 ? view.yourSeat : 0;
+    for (let i = 0; i < total; i++) {
+      const relPos = (i - anchor + total) % total;
+      arena.append(h("div", { class: "seat", style: seatStyle(relPos, total) }, seatPod(view, i, winSet)));
+    }
+    body = arena;
   }
 
   const blinds = `${view.smallBlind}/${view.bigBlind}`;
@@ -487,6 +542,9 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   copyBtn.onclick = () => hs.copyLink();
   const leaveBtn = h("button", { class: "leave-btn", type: "button" }, icon("right-from-bracket"), h("span", { class: "leave-txt" }, "Leave"));
   leaveBtn.onclick = () => hs.leave();
+  const layoutBtn = h("button", { class: "icon-btn", type: "button", title: "Switch layout" },
+    icon(layout === "table" ? "list-ul" : "table-cells-large"));
+  layoutBtn.onclick = () => hs.toggleLayout();
 
   clear(root).append(
     h("div", { class: "table-screen" },
@@ -495,10 +553,11 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         h("span", { class: "tb-key" }, h("span", { class: "tb-room-label" }, "Room "), h("b", {}, roomKeyFromHash()), copyBtn),
         h("span", { class: "tb-spacer" }),
         h("span", { class: "tb-meta" }, meta, view.spectatorCount > 0 ? ` · ${view.spectatorCount} watching` : "", " · hand ", h("b", {}, String(view.handNumber))),
+        layoutBtn,
         themeToggle("icon-btn"),
         leaveBtn,
       ),
-      arena,
+      body,
       h("div", { class: "footer" }, controls(view, ui, hs), mine(view, hs, animHole)),
     ),
   );

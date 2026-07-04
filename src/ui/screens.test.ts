@@ -6,7 +6,7 @@ import { renderTable, type TableHandlers, type UIState } from "./screens";
 
 const noop = () => {};
 const handlers: TableHandlers = {
-  act: noop, rebuy: noop, sitOut: noop, show: noop, start: noop, copyLink: noop, leave: noop,
+  act: noop, rebuy: noop, sitOut: noop, show: noop, start: noop, copyLink: noop, leave: noop, toggleLayout: noop,
 };
 
 function freshUI(): UIState {
@@ -46,7 +46,7 @@ describe("renderTable — oval table structure", () => {
     expect(mySeat).toBeTruthy();
     const style = mySeat!.getAttribute("style") ?? "";
     expect(style).toMatch(/left:50\.00%/);
-    expect(style).toMatch(/top:89\.00%/);
+    expect(style).toMatch(/top:90\.00%/);
   });
 
   it("does not render the local player's hole cards on the felt (they live in the footer)", () => {

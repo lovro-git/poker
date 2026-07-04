@@ -1,5 +1,5 @@
 import "./ui/styles.css";
-import { applyTheme } from "./ui/dom";
+import { applyTheme, getLayout, setLayout } from "./ui/dom";
 import { defaultConfig } from "./engine/game";
 import type { TableConfig } from "./engine/types";
 import { createGuest, createHost, resumeHost, type Client, type Identity } from "./net/room";
@@ -68,6 +68,10 @@ const handlers: TableHandlers = {
       () => toast("Invite link copied"),
       () => toast(linkFor(key)),
     );
+  },
+  toggleLayout: () => {
+    setLayout(getLayout() === "list" ? "table" : "list");
+    if (view) renderTable(root, view, ui, handlers);
   },
   leave: () => {
     if (connectTimer) clearTimeout(connectTimer);

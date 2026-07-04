@@ -781,6 +781,164 @@ input:focus-visible {
 }
 
 /* ============================================================
+   List / grid layout (alternative to the oval, toggled)
+   ============================================================ */
+.stage-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: clamp(8px, 2vw, 22px);
+  padding: clamp(8px, 2vw, 22px);
+  overflow: hidden;
+}
+.stage-wrap .pot {
+  background: var(--panel);
+  color: var(--chip-ink);
+  box-shadow: var(--shadow);
+}
+.stage-wrap .stage-label {
+  color: var(--muted);
+}
+.stage-wrap .msg {
+  color: var(--text);
+  text-shadow: none;
+}
+.players {
+  width: clamp(160px, 26vw, 290px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.players-head {
+  font-family: var(--ff-display);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding: 2px 2px 0;
+}
+.pl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+  transition: 0.18s;
+}
+.pl-row.is-open {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+  color: var(--dim);
+  justify-content: center;
+  font-size: 12px;
+  padding: 10px;
+}
+.pl-row.is-out {
+  opacity: 0.5;
+}
+.pl-row.is-acting {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 20px rgba(224, 168, 63, 0.25);
+}
+.pl-row.is-winner {
+  border-color: var(--go);
+  box-shadow: 0 0 0 1px var(--go), 0 0 20px rgba(31, 157, 105, 0.28);
+}
+.pl-pos {
+  width: 26px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.pl-cards {
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+.pl-info {
+  min-width: 0;
+  flex: 1;
+}
+.pl-name {
+  font-family: var(--ff-display);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.pl-off {
+  color: var(--red);
+  font-size: 8px;
+}
+.pl-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--chip-ink);
+  font-family: var(--ff-display);
+}
+.pl-chips i {
+  font-size: 0.8em;
+  opacity: 0.85;
+}
+.pl-act {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: none;
+}
+/* Restyle status pills/clock for the light list rows. */
+.pl-row .pill {
+  background: var(--panel-2);
+  color: var(--muted);
+}
+.pl-row .pill-raise,
+.pl-row .pill-bet {
+  background: rgba(224, 168, 63, 0.16);
+  color: var(--chip-ink);
+}
+.pl-row .pill-call {
+  background: rgba(31, 157, 105, 0.16);
+  color: var(--go-ink);
+}
+.pl-row .pill-allin,
+.pl-row .pill-afk {
+  background: rgba(224, 69, 77, 0.16);
+  color: var(--red);
+}
+.pl-row .pill-fold,
+.pl-row .pill-wait {
+  background: var(--panel-2);
+  color: var(--dim);
+}
+.pl-row .pl-clock {
+  color: var(--chip-ink);
+}
+.table-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 2vh, 18px);
+  padding-top: clamp(4px, 3vh, 34px);
+}
+
+/* ============================================================
    Footer (pinned): controls (left) + my cards (far right)
    ============================================================ */
 
@@ -1133,6 +1291,59 @@ input:focus-visible {
   }
   .seat {
     width: clamp(70px, 24vw, 104px);
+  }
+
+  /* list layout on phones: 3-across grid, community on top */
+  .stage-wrap {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    overflow-y: auto;
+  }
+  .players {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    overflow: visible;
+    padding: 0;
+  }
+  .players-head {
+    display: none;
+  }
+  .pl-row {
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 5px;
+    padding: 8px 6px;
+    border-radius: 14px;
+  }
+  .pl-row.is-open {
+    min-width: 0;
+    justify-content: center;
+    min-height: 74px;
+  }
+  .pl-info {
+    flex: none;
+    text-align: center;
+  }
+  .pl-name {
+    max-width: 84px;
+    font-size: 12px;
+  }
+  .pl-act {
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    min-height: 18px;
+  }
+  .table-main {
+    order: -1;
+    flex: none;
+    padding-top: 4px;
+    gap: 10px;
   }
   .pod {
     padding: 5px 6px;

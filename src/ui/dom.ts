@@ -59,6 +59,20 @@ export function toggleTheme(): "light" | "dark" {
   return next;
 }
 
+// --- Layout (oval table vs. list/grid) -------------------------------------
+
+export function getLayout(): "table" | "list" {
+  return localStorage.getItem("holdem:layout") === "list" ? "list" : "table";
+}
+
+export function setLayout(layout: "table" | "list"): void {
+  try {
+    localStorage.setItem("holdem:layout", layout);
+  } catch {
+    /* storage disabled — non-fatal */
+  }
+}
+
 /** A round icon button that flips light/dark; re-renders its own glyph. */
 export function themeToggle(cls = ""): HTMLElement {
   const btn = h("button", { class: cls, type: "button", title: "Toggle light / dark" });
