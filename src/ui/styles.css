@@ -243,6 +243,25 @@ input:focus-visible {
 .chipbadge i {
   font-size: 11px;
 }
+/* Poker chip: colored disc with a dashed inner ring; color set per amount. */
+.chip-disc {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  border-radius: 50%;
+  flex: none;
+  background: var(--chip-color, #c9ced6);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.45);
+  position: relative;
+  vertical-align: -0.2em;
+}
+.chip-disc::before {
+  content: "";
+  position: absolute;
+  inset: 17%;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(255, 255, 255, 0.85);
+}
 
 /* Icon + text alignment for chip counts and topbar buttons */
 .pod-chips,
@@ -556,20 +575,21 @@ input:focus-visible {
 .felt {
   position: absolute;
   inset: 0;
-  border-radius: 44% / 46%;
-  background: radial-gradient(58% 56% at 50% 42%, var(--felt-hi), var(--felt-lo) 66%, var(--felt-edge) 100%);
+  /* Rounded racetrack (stadium) rather than a pointy egg. */
+  border-radius: clamp(56px, 16vmin, 200px);
+  background: radial-gradient(62% 58% at 50% 44%, var(--felt-hi), var(--felt-lo) 66%, var(--felt-edge) 100%);
   box-shadow:
-    inset 0 0 0 clamp(6px, 1.1vw, 12px) var(--rail),
-    inset 0 0 0 calc(clamp(6px, 1.1vw, 12px) + 2px) rgba(231, 180, 90, 0.2),
+    inset 0 0 0 clamp(7px, 1.3vw, 14px) var(--rail),
+    inset 0 0 0 calc(clamp(7px, 1.3vw, 14px) + 2px) rgba(231, 180, 90, 0.2),
     inset 0 14px 60px rgba(0, 0, 0, 0.35),
     var(--shadow-lg);
 }
 .felt::after {
   content: "";
   position: absolute;
-  inset: 11%;
-  border-radius: 44% / 46%;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  inset: clamp(14px, 4%, 34px);
+  border-radius: clamp(42px, 13vmin, 170px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .center {
   position: absolute;

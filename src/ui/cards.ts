@@ -51,12 +51,27 @@ export function flipCard(card: Card, opts: CardOpts = {}): HTMLElement {
   return h("div", { class: `flip${opts.big ? " flip--big" : ""}` }, h("div", { class: "flip-inner" }, back, face));
 }
 
-/** A small chip-stack badge showing an amount (bets and the pot). */
+/** Casino-style chip color by amount: white → red → green → blue → black → purple. */
+export function chipColor(amount: number): string {
+  if (amount >= 5000) return "#8b5cf6"; // purple
+  if (amount >= 2000) return "#1f2530"; // black
+  if (amount >= 1000) return "#3a6fd8"; // blue
+  if (amount >= 500) return "#2fa96b"; // green
+  if (amount >= 100) return "#e0454d"; // red
+  return "#c9ced6"; // white / grey (low)
+}
+
+/** A little poker chip whose color reflects the amount. */
+export function chipDisc(amount: number): HTMLElement {
+  return h("span", { class: "chip-disc", style: `--chip-color:${chipColor(amount)}` });
+}
+
+/** A small chip badge showing an amount (bets and the pot). */
 export function chipBadge(amount: number, cls = ""): HTMLElement {
   return h(
     "div",
     { class: `chipbadge ${cls}`.trim() },
-    icon("coins"),
+    chipDisc(amount),
     h("span", { class: "chipbadge-amt tnum" }, amount.toLocaleString("en-US")),
   );
 }

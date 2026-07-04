@@ -1,6 +1,6 @@
 import type { Card } from "../engine/cards";
 import type { Format, PlayerAction } from "../engine/types";
-import { cardEl, chipBadge, flipCard } from "./cards";
+import { cardEl, chipBadge, chipDisc, flipCard } from "./cards";
 import { chips, clear, getLayout, h, icon, themeToggle } from "./dom";
 import type { ClientView, PublicSeat } from "../net/protocol";
 
@@ -225,7 +225,7 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
         !seat.connected && h("span", { class: "pod-off", title: "Disconnected" }, "●"),
         seat.name + (isMe ? " (you)" : ""),
       ),
-      h("div", { class: "pod-chips" }, icon("coins"), h("span", { class: "tnum" }, chips(seat.chips))),
+      h("div", { class: "pod-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
       playerActionCell(view, i, seat),
     ),
     seat.committedRound > 0 ? h("div", { class: "pod-bet" }, chipBadge(seat.committedRound)) : null,
@@ -265,7 +265,7 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
         !seat.connected && h("span", { class: "pl-off", title: "Disconnected" }, "●"),
         seat.name + (isMe ? " (you)" : ""),
       ),
-      h("div", { class: "pl-chips" }, icon("coins"), h("span", { class: "tnum" }, chips(seat.chips))),
+      h("div", { class: "pl-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
     ),
     h("div", { class: "pl-act" },
       seat.committedRound > 0 && chipBadge(seat.committedRound),
@@ -486,7 +486,7 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
     cardsEl,
     h("div", { class: "my-bar" },
       seat ? h("span", { class: "my-name" }, seat.name) : null,
-      seat ? h("span", { class: "my-chips" }, icon("coins"), h("span", { class: "tnum" }, chips(seat.chips))) : null,
+      seat ? h("span", { class: "my-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))) : null,
       ...buttons,
     ),
   );
@@ -505,7 +505,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   ui.prevBoardLen = view.board.length;
   ui.prevHand = view.handNumber;
 
-  const pot = () => h("div", { class: "pot" }, icon("coins"), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString()));
+  const pot = () => h("div", { class: "pot" }, chipDisc(view.pot), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString()));
   const stageLabel = () => h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? "");
   const msg = () => h("div", { class: "msg" }, centerMessage(view));
 
