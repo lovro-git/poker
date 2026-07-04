@@ -92,6 +92,7 @@ function newSeat(playerId: string, name: string, chips: number): Seat {
     status: "sittingOut",
     hasActedThisRound: false,
     sitOutNext: false,
+    afk: false,
     mucked: false,
     revealVoluntary: false,
     lastAction: "",
@@ -105,7 +106,15 @@ export function removePlayer(state: GameState, playerId: string): void {
 
 export function setSitOut(state: GameState, playerId: string, sitOut: boolean): void {
   const seat = seatOf(state, playerId);
-  if (seat) seat.sitOutNext = sitOut;
+  if (!seat) return;
+  seat.sitOutNext = sitOut;
+  if (!sitOut) seat.afk = false; // sitting back in clears the AFK mark
+}
+
+/** Mark a seat AFK after a turn timeout — skipped until they sit back in. */
+export function setAfk(state: GameState, seatIndex: number): void {
+  const seat = state.seats[seatIndex];
+  if (seat) seat.afk = true;
 }
 
 /** Cash-game rebuy: top a seated player back up to the buy-in. Between hands only. */
@@ -161,7 +170,7 @@ export function prepareNextHand(state: GameState): number {
 function eligibleSeats(state: GameState): number[] {
   const out: number[] = [];
   state.seats.forEach((seat, i) => {
-    if (seat && seat.chips > 0 && !seat.sitOutNext) out.push(i);
+    if (seat && seat.chips > 0 && !seat.sitOutNext && !seat.afk) out.push(i);
   });
   return out;
 }

@@ -33,6 +33,8 @@ export interface Seat {
   hasActedThisRound: boolean;
   /** Player asked to sit out at the next hand boundary. */
   sitOutNext: boolean;
+  /** Timed out on their turn — skipped from hands until they sit back in. */
+  afk: boolean;
   /** Whether this player mucked at showdown (display only). */
   mucked: boolean;
   /** Winner of an uncalled pot chose to voluntarily reveal (display only). */

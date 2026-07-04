@@ -168,6 +168,7 @@ function actionPill(label: string): HTMLElement {
 function playerActionCell(view: ClientView, i: number, seat: PublicSeat): Node | null {
   const acting = view.stage !== "showdown" && view.toActSeat === i;
   if (acting) return h("div", { class: "pl-clock" }, "⏱ ", h("span", { class: "clock-num" }, "—"));
+  if (seat.afk) return h("span", { class: "pill pill-afk" }, "AFK");
   if (seat.lastAction) return actionPill(seat.lastAction);
   if (seat.waitingToPlay) return h("span", { class: "pill pill-wait" }, "Next hand");
   if (seat.chips <= 0 && seat.status !== "allin") {
@@ -379,10 +380,17 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
   } else if (dealt) {
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, faceDown: true }), cardEl(null, { big: true, faceDown: true }));
   } else {
-    cardsEl = h("div", { class: "my-cards" }, h("span", { class: "placeholder" }, view.yourSeat < 0 ? "Spectating" : "Waiting for next hand"));
+    const label = view.yourSeat < 0 ? "Spectating" : seat?.afk ? "You're away" : "Waiting for next hand";
+    cardsEl = h("div", { class: "my-cards" }, h("span", { class: "placeholder" }, label));
   }
 
   const bar = h("div", { class: "my-bar" });
+  if (seat?.afk) {
+    // Timed out — offer to come back in.
+    const back = h("button", { class: "mini-btn on", type: "button" }, "I'm back");
+    back.onclick = () => hs.sitOut(false);
+    bar.append(back);
+  }
   if (seat) {
     // Showdown muck / show controls.
     if (view.stage === "showdown" && (seat.status === "active" || seat.status === "allin")) {

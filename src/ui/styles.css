@@ -669,6 +669,10 @@ input:focus-visible {
 .pill-fold {
   color: var(--dim);
 }
+.pill-afk {
+  background: rgba(224, 69, 77, 0.16);
+  color: var(--red);
+}
 
 .table-main {
   flex: 1;

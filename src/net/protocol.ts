@@ -37,6 +37,7 @@ export interface PublicSeat {
   revealVoluntary: boolean;
   sitOutNext: boolean;
   lastAction: string;
+  afk: boolean;
   connected: boolean;
   isButton: boolean;
   isSB: boolean;
@@ -111,6 +112,7 @@ export function viewFor(state: GameState, ctx: ViewContext): ClientView {
       revealVoluntary: seat.revealVoluntary,
       sitOutNext: seat.sitOutNext,
       lastAction: seat.lastAction,
+      afk: seat.afk,
       connected: ctx.connected.has(seat.playerId),
       isButton: false, // set below
       isSB: false,

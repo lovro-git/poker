@@ -9,6 +9,7 @@ import {
   rebuy,
   removePlayer,
   seatPlayer,
+  setAfk,
   setSitOut,
   showCards,
   startHand,
@@ -189,9 +190,12 @@ class HostClient implements Client {
     const s = this.state;
     if (!isHandInProgress(s) || s.toActSeat < 0 || s.actDeadline == null) return;
     if (Date.now() >= s.actDeadline) {
-      const la = legalActions(s, s.toActSeat);
+      const seatIdx = s.toActSeat;
+      const la = legalActions(s, seatIdx);
       if (la) {
-        applyAction(s, s.toActSeat, la.canCheck ? { type: "check" } : { type: "fold" });
+        applyAction(s, seatIdx, la.canCheck ? { type: "check" } : { type: "fold" });
+        // Timed out: mark AFK so they're skipped until they sit back in.
+        setAfk(s, seatIdx);
         this.afterChange();
       }
     }
