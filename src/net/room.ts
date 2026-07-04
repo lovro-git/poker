@@ -50,8 +50,18 @@ const ROOM_CONFIG = {
   appId: APP_ID,
   relayUrls: RELAYS,
   // Connect to ALL relays (not a random subset) so host and guest are guaranteed
-  // to share a rendezvous relay — the usual cause of "join never connects".
+  // to share a rendezvous relay — one cause of "join never connects".
   relayRedundancy: RELAYS.length,
+  // STUN for normal NATs; TURN so peers on different networks (e.g. mobile data,
+  // strict/symmetric NAT) can still connect by relaying media as a last resort.
+  rtcConfig: {
+    iceServers: [
+      { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+      { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+      { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+      { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
+    ],
+  } as RTCConfiguration,
 };
 
 // --- Host ------------------------------------------------------------------
