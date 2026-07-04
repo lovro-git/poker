@@ -36,6 +36,7 @@ export interface PublicSeat {
   mucked: boolean;
   revealVoluntary: boolean;
   sitOutNext: boolean;
+  lastAction: string;
   connected: boolean;
   isButton: boolean;
   waitingToPlay: boolean; // seated but not dealt into the current hand
@@ -107,6 +108,7 @@ export function viewFor(state: GameState, ctx: ViewContext): ClientView {
       mucked: seat.mucked,
       revealVoluntary: seat.revealVoluntary,
       sitOutNext: seat.sitOutNext,
+      lastAction: seat.lastAction,
       connected: ctx.connected.has(seat.playerId),
       isButton: false, // set below
       waitingToPlay: !dealt && seat.chips > 0 && !seat.sitOutNext,

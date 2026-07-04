@@ -37,6 +37,8 @@ export interface Seat {
   mucked: boolean;
   /** Winner of an uncalled pot chose to voluntarily reveal (display only). */
   revealVoluntary: boolean;
+  /** Short label of this player's most recent action, e.g. "Raise", "Call". */
+  lastAction: string;
 }
 
 export type Stage =

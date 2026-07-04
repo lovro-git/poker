@@ -1,13 +1,7 @@
 import { rankValue, suitOf, SUIT_SYMBOL, type Card } from "../engine/cards";
 import { h } from "./dom";
 
-const RANK_LABEL: Record<number, string> = {
-  14: "A",
-  13: "K",
-  12: "Q",
-  11: "J",
-  10: "10",
-};
+const RANK_LABEL: Record<number, string> = { 14: "A", 13: "K", 12: "Q", 11: "J", 10: "10" };
 
 function rankLabel(card: Card): string {
   const v = rankValue(card);
@@ -19,11 +13,15 @@ export interface CardOpts {
   small?: boolean;
   big?: boolean;
   dim?: boolean; // not part of the winning five
+  slot?: boolean; // empty placeholder outline
 }
 
-/** Build a single playing-card element. Pass null/faceDown for a card back. */
+/** Build a single playing-card element. */
 export function cardEl(card: Card | null, opts: CardOpts = {}): HTMLElement {
   const size = opts.big ? "card--big" : opts.small ? "card--sm" : "";
+  if (opts.slot) {
+    return h("div", { class: `card card--slot ${size}`.trim() });
+  }
   if (!card || opts.faceDown) {
     return h("div", { class: `card card--back ${size}`.trim() }, h("div", { class: "card-weave" }));
   }
@@ -33,21 +31,20 @@ export function cardEl(card: Card | null, opts: CardOpts = {}): HTMLElement {
   return h(
     "div",
     { class: cls.trim() },
-    h("span", { class: "card-rank" }, rankLabel(card)),
-    h("span", { class: "card-suit" }, SUIT_SYMBOL[suit]),
+    h("div", { class: "card-corner" },
+      h("span", { class: "card-rank" }, rankLabel(card)),
+      h("span", { class: "card-csuit" }, SUIT_SYMBOL[suit]),
+    ),
+    !opts.small && h("div", { class: "card-pip" }, SUIT_SYMBOL[suit]),
   );
 }
 
-/** A small chip-stack badge showing an amount (used for bets and the pot). */
+/** A small chip-stack badge showing an amount (bets and the pot). */
 export function chipBadge(amount: number, cls = ""): HTMLElement {
   return h(
     "div",
     { class: `chipbadge ${cls}`.trim() },
     h("span", { class: "chipbadge-dot" }),
-    h("span", { class: "chipbadge-amt" }, formatChips(amount)),
+    h("span", { class: "chipbadge-amt tnum" }, amount.toLocaleString("en-US")),
   );
-}
-
-function formatChips(n: number): string {
-  return n.toLocaleString("en-US");
 }

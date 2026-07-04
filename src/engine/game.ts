@@ -92,6 +92,7 @@ function newSeat(playerId: string, name: string, chips: number): Seat {
     sitOutNext: false,
     mucked: false,
     revealVoluntary: false,
+    lastAction: "",
   };
 }
 
@@ -205,6 +206,7 @@ export function startHand(state: GameState, rng: () => number = Math.random): bo
     seat.hasActedThisRound = false;
     seat.mucked = false;
     seat.revealVoluntary = false;
+    seat.lastAction = "";
     seat.holeCards = null;
     seat.status = "sittingOut";
   }
@@ -230,6 +232,8 @@ export function startHand(state: GameState, rng: () => number = Math.random): bo
 
   commit(state.seats[sbSeat]!, sb);
   commit(state.seats[bbSeat]!, bb);
+  state.seats[sbSeat]!.lastAction = "SB";
+  state.seats[bbSeat]!.lastAction = "BB";
   state.currentBet = Math.max(
     state.seats[sbSeat]!.committedRound,
     state.seats[bbSeat]!.committedRound,
@@ -288,21 +292,25 @@ export function applyAction(
     case "fold":
       seat.status = "folded";
       seat.hasActedThisRound = true;
+      seat.lastAction = "Fold";
       break;
 
     case "check":
       if (toCall !== 0) return false;
       seat.hasActedThisRound = true;
+      seat.lastAction = "Check";
       break;
 
     case "call": {
       if (toCall === 0) {
         // Treat as check.
         seat.hasActedThisRound = true;
+        seat.lastAction = "Check";
         break;
       }
       commit(seat, toCall);
       seat.hasActedThisRound = true;
+      seat.lastAction = seat.chips === 0 ? "All-in" : "Call";
       break;
     }
 
@@ -319,6 +327,7 @@ export function applyAction(
       commit(seat, target - seat.committedRound);
       state.currentBet = target;
       seat.hasActedThisRound = true;
+      seat.lastAction = isAllIn ? "All-in" : prevBet === 0 ? "Bet" : "Raise";
 
       if (raiseSize >= state.lastRaiseSize) {
         // Full raise reopens the betting.
@@ -370,6 +379,7 @@ function nextStreet(state: GameState): void {
     if (seat && seat.status === "active") {
       seat.committedRound = 0;
       seat.hasActedThisRound = false;
+      seat.lastAction = "";
     }
   }
   state.currentBet = 0;

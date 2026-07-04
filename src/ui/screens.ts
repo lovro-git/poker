@@ -124,14 +124,6 @@ const STAGE_LABEL: Record<string, string> = {
   handComplete: "Hand over",
 };
 
-function seatStyle(relPos: number, total: number): string {
-  const angle = Math.PI / 2 + (relPos / total) * Math.PI * 2;
-  const cx = 50, cy = 50, rx = 46, ry = 45;
-  const left = cx + rx * Math.cos(angle);
-  const top = cy + ry * Math.sin(angle);
-  return `left:${left.toFixed(1)}%;top:${top.toFixed(1)}%`;
-}
-
 function winningCards(view: ClientView): Set<Card> {
   const set = new Set<Card>();
   if (view.stage !== "showdown" || !view.result || !view.result.wentToShowdown) return set;
@@ -142,48 +134,56 @@ function winningCards(view: ClientView): Set<Card> {
   return set;
 }
 
-function seatTag(view: ClientView, i: number, seat: PublicSeat): Node | null {
-  if (view.stage !== "showdown" && view.toActSeat === i) {
-    return h("div", { class: "pod-tag" }, "⏱ ", h("span", { class: "clock-num" }, "—"));
+function actionPill(label: string): HTMLElement {
+  const key = label.split(" ")[0].toLowerCase().replace("-", "");
+  return h("span", { class: `pill pill-${key}` }, label);
+}
+
+/** The right-hand cell of a player row: whose-turn clock, last action, or status. */
+function playerActionCell(view: ClientView, i: number, seat: PublicSeat): Node | null {
+  const acting = view.stage !== "showdown" && view.toActSeat === i;
+  if (acting) return h("div", { class: "pl-clock" }, "⏱ ", h("span", { class: "clock-num" }, "—"));
+  if (seat.lastAction) return actionPill(seat.lastAction);
+  if (seat.waitingToPlay) return h("span", { class: "pill pill-wait" }, "Next hand");
+  if (seat.chips <= 0 && seat.status !== "allin") {
+    return h("span", { class: "pill pill-wait" }, view.config.format === "cash" ? "Busted" : "Out");
   }
-  if (seat.status === "allin") return h("div", { class: "pod-tag" }, "All in");
-  if (seat.status === "folded") return h("div", { class: "pod-tag" }, "Folded");
-  if (seat.waitingToPlay) return h("div", { class: "pod-tag" }, "Next hand");
-  if (seat.chips <= 0) return h("div", { class: "pod-tag" }, view.config.format === "cash" ? "Busted" : "Out");
-  if (seat.status === "sittingOut") return h("div", { class: "pod-tag" }, "Sitting out");
+  if (seat.status === "sittingOut") return h("span", { class: "pill pill-wait" }, "Away");
   return null;
 }
 
-function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
+function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   const seat = view.seats[i];
-  if (!seat) return h("div", { class: "pod is-empty" }, "Open seat");
+  if (!seat) return h("div", { class: "pl-row is-open" }, h("span", { class: "pl-openseat" }, "Open seat"));
 
   const isMe = i === view.yourSeat;
   const acting = view.stage !== "showdown" && view.toActSeat === i;
   const isWinner = view.stage === "showdown" && !!view.result?.pots.some((p) => p.winners.includes(i));
-  const cls = ["pod", seat.status === "folded" && "is-folded", acting && "is-acting", isWinner && "is-winner"]
+  const cls = ["pl-row", seat.status === "folded" && "is-folded", acting && "is-acting", isWinner && "is-winner"]
     .filter(Boolean).join(" ");
 
   const dealt = seat.status === "active" || seat.status === "allin" || seat.status === "folded";
-  let cards: HTMLElement | null = null;
-  if (dealt) {
-    const faces = seat.holeCards && !isMe && !seat.mucked;
-    const cardEls = faces
+  const faces = seat.holeCards && !isMe && !seat.mucked;
+  const cardEls = !dealt
+    ? [h("span", { class: "pl-nocards" }, "")]
+    : faces
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
       : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];
-    cards = h("div", { class: "pod-cards" }, ...cardEls);
-  }
 
   return h("div", { class: cls },
-    seat.isButton && h("div", { class: "dealer-btn" }, "D"),
-    cards,
-    h("div", { class: "pod-name" },
-      !seat.connected && h("span", { class: "off", title: "Disconnected" }, "●"),
-      seat.name + (isMe ? " (you)" : ""),
+    h("div", { class: `pl-btn ${seat.isButton ? "on" : ""}` }, seat.isButton ? "D" : ""),
+    h("div", { class: "pl-cards" }, ...cardEls),
+    h("div", { class: "pl-info" },
+      h("div", { class: "pl-name" },
+        !seat.connected && h("span", { class: "pl-off", title: "Disconnected" }, "●"),
+        seat.name + (isMe ? " (you)" : ""),
+      ),
+      h("div", { class: "pl-chips tnum" }, chips(seat.chips), h("span", { class: "pl-chip-u" }, " chips")),
     ),
-    h("div", { class: "pod-chips tnum" }, chips(seat.chips)),
-    seatTag(view, i, seat),
-    seat.committedRound > 0 && h("div", { class: "bet-chip" }, chipBadge(seat.committedRound)),
+    h("div", { class: "pl-act" },
+      seat.committedRound > 0 && chipBadge(seat.committedRound),
+      playerActionCell(view, i, seat),
+    ),
   );
 }
 
@@ -209,9 +209,15 @@ function centerMessage(view: ClientView): string {
   return "";
 }
 
-function boardRow(view: ClientView, winSet: Set<Card>): HTMLElement {
-  const cards = view.board.map((c) => cardEl(c, { dim: winSet.size > 0 && !winSet.has(c) }));
-  return h("div", { class: "board" }, ...cards);
+function community(view: ClientView, winSet: Set<Card>): HTMLElement {
+  const slots: HTMLElement[] = [];
+  for (let k = 0; k < 5; k++) {
+    const card = view.board[k];
+    slots.push(
+      card ? cardEl(card, { big: true, dim: winSet.size > 0 && !winSet.has(card) }) : cardEl(null, { big: true, slot: true }),
+    );
+  }
+  return h("div", { class: "community" }, ...slots);
 }
 
 // --- Action controls -------------------------------------------------------
@@ -382,28 +388,28 @@ function mine(view: ClientView, hs: TableHandlers): HTMLElement {
 
 export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs: TableHandlers): void {
   const winSet = winningCards(view);
-  const total = view.config.maxSeats;
-  const anchor = view.yourSeat >= 0 ? view.yourSeat : 0;
 
-  const felt = h("div", { class: "felt" });
-  const center = h("div", { class: "center" },
-    h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? ""),
+  // Player list: occupied seats in seat order (you highlighted).
+  const rows: HTMLElement[] = [];
+  view.seats.forEach((seat, i) => {
+    if (seat) rows.push(playerRow(view, i, winSet));
+  });
+  const openCount = view.seats.filter((s) => s === null).length;
+  const players = h("div", { class: "players" },
+    h("div", { class: "players-head" }, "Players"),
+    ...rows,
+    openCount > 0 && h("div", { class: "players-open" }, `${openCount} open seat${openCount > 1 ? "s" : ""}`),
+  );
+
+  const tableMain = h("div", { class: "table-main" },
     h("div", { class: "pot" }, h("span", { class: "chipbadge-dot" }), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString())),
-    boardRow(view, winSet),
+    community(view, winSet),
+    h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? ""),
     h("div", { class: "msg" }, centerMessage(view)),
   );
 
-  const feltWrap = h("div", { class: "felt-wrap" }, felt, center);
-  for (let i = 0; i < total; i++) {
-    const relPos = (i - anchor + total) % total;
-    const seatEl = h("div", { class: "seat", style: seatStyle(relPos, total) }, seatPod(view, i, winSet));
-    feltWrap.append(seatEl);
-  }
-
   const blinds = `${view.smallBlind}/${view.bigBlind}`;
-  const meta = view.config.format === "tournament"
-    ? `Tournament · blinds ${blinds}`
-    : `Cash · blinds ${blinds}`;
+  const meta = `${view.config.format === "tournament" ? "Tournament" : "Cash"} · blinds ${blinds}`;
 
   const copyBtn = h("button", { type: "button" }, "Copy link");
   copyBtn.onclick = () => hs.copyLink();
@@ -419,7 +425,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         h("span", { class: "tb-meta" }, meta, view.spectatorCount > 0 ? ` · ${view.spectatorCount} watching` : "", " · hand ", h("b", {}, String(view.handNumber))),
         leaveBtn,
       ),
-      feltWrap,
+      h("div", { class: "stage-wrap" }, players, tableMain),
       h("div", { class: "dock" }, controls(view, ui, hs), mine(view, hs)),
     ),
   );
