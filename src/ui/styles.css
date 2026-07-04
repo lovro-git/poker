@@ -1006,11 +1006,12 @@ input:focus-visible {
     white-space: nowrap;
   }
 
+  /* community cards on top, players below them */
   .table-main {
-    flex: 1;
-    justify-content: center;
-    padding-top: 0;
-    gap: 12px;
+    order: -1;
+    flex: none;
+    padding-top: 4px;
+    gap: 10px;
   }
 
   /* my cards above, controls full width below */
