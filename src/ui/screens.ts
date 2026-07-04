@@ -609,11 +609,6 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
       ),
       body,
       h("div", { class: "footer" }, controls(view, ui, hs), mine(view, hs, animHole)),
-      h("div", { class: "rotate-hint" },
-        icon("rotate"),
-        h("div", { class: "rotate-title" }, "Rotate your phone"),
-        h("p", {}, "The table plays in landscape — turn your device sideways."),
-      ),
     ),
   );
 }
