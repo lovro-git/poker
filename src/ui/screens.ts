@@ -162,6 +162,23 @@ export interface UIState {
   prevHand: number; // to animate hole cards only on a fresh hand
 }
 
+// Peek state persists across re-renders so another player's turn doesn't reset it.
+let revealHeld = false;
+let revealToggled = false;
+let releaseBound = false;
+function ensureReleaseListeners() {
+  if (releaseBound) return;
+  releaseBound = true;
+  const release = () => {
+    if (!revealHeld) return;
+    revealHeld = false;
+    document.querySelector(".my-cards.peekable")?.classList.remove("revealed");
+  };
+  for (const ev of ["pointerup", "touchend", "touchcancel", "pointercancel", "mouseup", "blur"]) {
+    window.addEventListener(ev, release);
+  }
+}
+
 const STAGE_LABEL: Record<string, string> = {
   waiting: "Waiting",
   preflop: "Pre-flop",
@@ -456,22 +473,21 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
       ...seat.holeCards.map((c) => flipCard(c, { big: true, dim: folded, anim: animHole })),
       h("div", { class: "peek-hint" }, mode === "tap" ? "tap to reveal" : "hold to peek"),
     );
-    const reveal = () => el.classList.add("revealed");
-    const hide = () => el.classList.remove("revealed");
-    // Kill the iOS long-press callout / selection regardless of mode.
+    // Re-apply reveal state (survives re-renders on another player's turn).
+    if (revealHeld || revealToggled) el.classList.add("revealed");
     el.addEventListener("contextmenu", (e) => e.preventDefault());
     if (mode === "tap") {
-      el.addEventListener("click", () => el.classList.toggle("revealed"));
+      el.addEventListener("click", () => {
+        revealToggled = !revealToggled;
+        el.classList.toggle("revealed", revealToggled);
+      });
     } else {
-      // Explicit touch (mobile) + mouse (desktop) so nothing double-fires;
-      // preventDefault on touchstart suppresses iOS selection and the mouse
-      // emulation, so the desktop mouse* handlers never run on a phone.
-      el.addEventListener("touchstart", (e) => { e.preventDefault(); reveal(); }, { passive: false });
-      el.addEventListener("touchend", (e) => { e.preventDefault(); hide(); }, { passive: false });
-      el.addEventListener("touchcancel", hide);
-      el.addEventListener("mousedown", reveal);
-      el.addEventListener("mouseup", hide);
-      el.addEventListener("mouseleave", hide);
+      // Hold: start on touch/mouse; release is handled globally (below) so lifting
+      // your finger still works even if the element was rebuilt mid-hold.
+      const hold = (e: Event) => { e.preventDefault(); revealHeld = true; el.classList.add("revealed"); };
+      el.addEventListener("touchstart", hold, { passive: false });
+      el.addEventListener("mousedown", hold);
+      ensureReleaseListeners();
     }
     cardsEl = el;
   } else if (dealt) {
@@ -532,6 +548,11 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   const animHole = !sameHand;
   ui.prevBoardLen = view.board.length;
   ui.prevHand = view.handNumber;
+  // New hand -> cards hidden again by default.
+  if (!sameHand) {
+    revealHeld = false;
+    revealToggled = false;
+  }
 
   const pot = () => h("div", { class: "pot" }, chipDisc(view.pot), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString()));
   const stageLabel = () => h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? "");
@@ -588,6 +609,11 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
       ),
       body,
       h("div", { class: "footer" }, controls(view, ui, hs), mine(view, hs, animHole)),
+      h("div", { class: "rotate-hint" },
+        icon("rotate"),
+        h("div", { class: "rotate-title" }, "Rotate your phone"),
+        h("p", {}, "The table plays in landscape — turn your device sideways."),
+      ),
     ),
   );
 }
