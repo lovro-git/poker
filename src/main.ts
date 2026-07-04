@@ -149,8 +149,14 @@ function showLobby(err: string) {
       startClient(createHost(key, { playerId: me.playerId, name }, config), key);
     },
     join: (name, key) => {
-      localStorage.removeItem("holdem:hostkey");
-      startClient(createGuest(key, { playerId: me.playerId, name }), key);
+      if (key === "TEST") {
+        // Local demo table filled with 7 bots (8 seats) — you host it yourself.
+        localStorage.setItem("holdem:hostkey", key);
+        startClient(createHost(key, { playerId: me.playerId, name }, defaultConfig({ maxSeats: 8 })), key);
+      } else {
+        localStorage.removeItem("holdem:hostkey");
+        startClient(createGuest(key, { playerId: me.playerId, name }), key);
+      }
     },
   });
 }

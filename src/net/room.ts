@@ -87,6 +87,8 @@ class HostClient implements Client {
   private deadlineSeat = -1;
   private clock: ReturnType<typeof setInterval>;
   private presence: ReturnType<typeof setInterval>;
+  private mockIds = new Set<string>(); // bot players (TEST room)
+  private botSeat = -1;
 
   constructor(
     readonly roomKey: string,
@@ -97,6 +99,17 @@ class HostClient implements Client {
     this.state = resume ?? createGame(config);
     if (!resume) seatPlayer(this.state, me.playerId, me.name, 0);
     this.connected.add(me.playerId);
+
+    // "TEST" room: fill with bots so you can see a full table on your own.
+    if (roomKey.toUpperCase() === "TEST") {
+      if (!resume) this.seedMocks();
+      for (const seat of this.state.seats) {
+        if (seat && seat.playerId.startsWith("mock_")) {
+          this.mockIds.add(seat.playerId);
+          this.connected.add(seat.playerId);
+        }
+      }
+    }
 
     this.conn = connect();
     this.conn.on("connect", () => this.conn.subscribe(cmdTopic(roomKey)));
@@ -216,13 +229,46 @@ class HostClient implements Client {
     const cutoff = Date.now() - PRESENCE_TIMEOUT_MS;
     let changed = false;
     for (const pid of this.connected) {
-      if (pid === this.me.playerId) continue;
+      if (pid === this.me.playerId || this.mockIds.has(pid)) continue;
       if ((this.lastSeen.get(pid) ?? 0) < cutoff) {
         this.connected.delete(pid);
         changed = true;
       }
     }
     if (changed) this.afterChange();
+  }
+
+  // --- Bots (TEST room) ---
+
+  private seedMocks() {
+    const names = ["Ava", "Ben", "Cleo", "Mia", "Noah", "Ivy", "Leo"];
+    names.forEach((n, i) => {
+      const id = `mock_${i}`;
+      const seat = seatPlayer(this.state, id, n);
+      if (seat >= 0) {
+        this.mockIds.add(id);
+        this.connected.add(id);
+      }
+    });
+  }
+
+  private botMove(idx: number) {
+    const s = this.state;
+    const seat = s.seats[idx];
+    const la = legalActions(s, idx);
+    if (!seat || !la) return;
+    const r = Math.random();
+    let action: PlayerAction;
+    if (la.canCheck) {
+      action = r < 0.85 ? { type: "check" } : { type: "raise", to: la.minRaiseTo };
+    } else {
+      const cheap = la.toCall <= Math.max(s.config.bigBlind * 3, seat.chips * 0.12);
+      if (r < 0.1 && la.canRaise) action = { type: "raise", to: la.minRaiseTo };
+      else if (cheap || r < 0.45) action = { type: "call" };
+      else action = { type: "fold" };
+    }
+    applyAction(s, idx, action);
+    this.afterChange();
   }
 
   private afterChange() {
@@ -242,6 +288,25 @@ class HostClient implements Client {
     if (!this.progressScheduled && s.stage === "showdown") {
       this.progressScheduled = true;
       setTimeout(() => this.nextHand(), 5000);
+    }
+
+    // TEST room: auto-deal and drive the bots.
+    if (this.mockIds.size > 0) {
+      const eligible = s.seats.filter((x) => x && x.chips > 0 && !x.sitOutNext && !x.afk).length;
+      if (!this.progressScheduled && s.stage === "waiting" && eligible >= 2) {
+        this.progressScheduled = true;
+        setTimeout(() => this.nextHand(), 800);
+      }
+      const acting = isHandInProgress(s) && s.toActSeat >= 0 ? s.seats[s.toActSeat] : null;
+      if (acting && this.mockIds.has(acting.playerId)) {
+        if (this.botSeat !== s.toActSeat) {
+          this.botSeat = s.toActSeat;
+          const idx = s.toActSeat;
+          setTimeout(() => { if (this.state.toActSeat === idx) this.botMove(idx); }, 600 + Math.floor(Math.random() * 700));
+        }
+      } else {
+        this.botSeat = -1;
+      }
     }
 
     this.persist();

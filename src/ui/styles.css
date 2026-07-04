@@ -225,18 +225,18 @@ input:focus-visible {
 .card-rank {
   font-family: var(--ff-display);
   font-weight: 700;
-  font-size: calc(var(--card-big-w) * 0.34);
+  font-size: calc(var(--card-big-w) * 0.42);
 }
 .card-csuit {
-  font-size: calc(var(--card-big-w) * 0.24);
+  font-size: calc(var(--card-big-w) * 0.28);
 }
 .card-pip {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: calc(var(--card-big-w) * 0.52);
-  opacity: 0.9;
+  font-size: calc(var(--card-big-w) * 0.62);
+  opacity: 0.92;
 }
 .suit-svg {
   width: 1em;
@@ -252,10 +252,10 @@ input:focus-visible {
   height: 100%;
 }
 .card--sm .card-rank {
-  font-size: calc(var(--card-sm-w) * 0.46);
+  font-size: calc(var(--card-sm-w) * 0.52);
 }
 .card--sm .card-csuit {
-  font-size: calc(var(--card-sm-w) * 0.36);
+  font-size: calc(var(--card-sm-w) * 0.42);
 }
 
 @keyframes deal {
@@ -743,9 +743,10 @@ input:focus-visible {
 }
 .pod-bet {
   position: absolute;
-  bottom: calc(-1 * clamp(8px, 1.6vw, 13px));
+  top: calc(100% + 4px); /* fully below the pod so it never covers the pill */
   left: 50%;
   transform: translateX(-50%);
+  white-space: nowrap;
 }
 .pos-tag {
   font-family: var(--ff-display);
@@ -832,13 +833,13 @@ input:focus-visible {
   height: calc(var(--card-board-w) * 1.4);
 }
 .community .card-rank {
-  font-size: calc(var(--card-board-w) * 0.34);
+  font-size: calc(var(--card-board-w) * 0.42);
 }
 .community .card-csuit {
-  font-size: calc(var(--card-board-w) * 0.24);
+  font-size: calc(var(--card-board-w) * 0.28);
 }
 .community .card-pip {
-  font-size: calc(var(--card-board-w) * 0.52);
+  font-size: calc(var(--card-board-w) * 0.62);
 }
 .stage-label {
   font-family: var(--ff-display);
@@ -1342,9 +1343,9 @@ input:focus-visible {
 /* Phones: compact pods, my cards above full-width controls in the footer. */
 @media (max-width: 640px) {
   :root {
-    --card-big-w: clamp(58px, 15.5vw, 92px);
-    --card-board-w: clamp(30px, 7.2vw, 46px);
-    --card-sm-w: clamp(19px, 4.7vw, 27px);
+    --card-big-w: clamp(64px, 17.5vw, 102px);
+    --card-board-w: clamp(34px, 8.2vw, 52px);
+    --card-sm-w: clamp(21px, 5.2vw, 30px);
   }
 
   .topbar {
