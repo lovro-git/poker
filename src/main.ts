@@ -4,7 +4,7 @@ import { defaultConfig } from "./engine/game";
 import type { TableConfig } from "./engine/types";
 import { createGuest, createHost, resumeHost, type Client, type Identity } from "./net/room";
 import type { ClientView } from "./net/protocol";
-import { renderLobby, renderTable, type TableHandlers, type UIState } from "./ui/screens";
+import { renderConnecting, renderLobby, renderTable, type TableHandlers, type UIState } from "./ui/screens";
 
 const root = document.getElementById("app")!;
 
@@ -45,6 +45,7 @@ let client: Client | null = null;
 let view: ClientView | null = null;
 const ui: UIState = { raiseTo: 0, turnKey: "", prevBoardLen: 0, prevHand: 0 };
 let clockTimer: ReturnType<typeof setInterval> | null = null;
+let connectTimer: ReturnType<typeof setTimeout> | null = null;
 
 function toast(text: string) {
   const t = document.createElement("div");
@@ -69,6 +70,8 @@ const handlers: TableHandlers = {
     );
   },
   leave: () => {
+    if (connectTimer) clearTimeout(connectTimer);
+    connectTimer = null;
     client?.leave();
     client = null;
     view = null;
@@ -80,8 +83,24 @@ const handlers: TableHandlers = {
 
 function startClient(newClient: Client, roomKey: string) {
   client = newClient;
+  view = null;
   location.hash = `room=${roomKey}`;
+
+  // A guest sees nothing until the host's first state arrives — show a
+  // connecting screen with feedback, and a stronger hint if it stalls.
+  if (!newClient.isHost) {
+    renderConnecting(root, roomKey, handlers.leave);
+    if (connectTimer) clearTimeout(connectTimer);
+    connectTimer = setTimeout(() => {
+      if (!view) renderConnecting(root, roomKey, handlers.leave, true);
+    }, 10000);
+  }
+
   newClient.onView((v) => {
+    if (connectTimer) {
+      clearTimeout(connectTimer);
+      connectTimer = null;
+    }
     // Reset the raise slider when it becomes a fresh decision.
     const turnKey = `${v.handNumber}:${v.toActSeat}:${v.currentBet}`;
     if (turnKey !== ui.turnKey) {

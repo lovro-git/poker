@@ -99,6 +99,27 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
   if (!savedName) nameInput.focus();
 }
 
+// --- Connecting (guest, before first state arrives) ------------------------
+
+export function renderConnecting(root: HTMLElement, roomKey: string, onLeave: () => void, slow = false): void {
+  const back = h("button", { class: "btn btn-ghost", type: "button" }, "Back to lobby");
+  back.onclick = onLeave;
+  clear(root).append(
+    h("div", { class: "lobby" },
+      h("div", { class: "lobby-card connecting" },
+        h("div", { class: "spinner" }),
+        h("h2", { class: "conn-title" }, "Joining room"),
+        h("div", { class: "conn-key tnum" }, roomKey),
+        h("p", { class: "conn-msg" },
+          slow
+            ? "Still connecting. Make sure the host's tab is open and the room key is right — the host must be online for you to join."
+            : "Connecting to the table…"),
+        back,
+      ),
+    ),
+  );
+}
+
 // --- Table -----------------------------------------------------------------
 
 export interface TableHandlers {

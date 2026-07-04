@@ -36,6 +36,24 @@ export interface Client {
 
 const stateKey = (roomKey: string) => `holdem:host:${roomKey}`;
 
+// Rendezvous config shared by host and guest — both must use the same relays to
+// find each other. A curated set of major, reliable nostr relays with redundancy.
+const RELAYS = [
+  "wss://relay.damus.io",
+  "wss://nos.lol",
+  "wss://relay.nostr.band",
+  "wss://relay.primal.net",
+  "wss://relay.snort.social",
+  "wss://nostr.mom",
+];
+const ROOM_CONFIG = {
+  appId: APP_ID,
+  relayUrls: RELAYS,
+  // Connect to ALL relays (not a random subset) so host and guest are guaranteed
+  // to share a rendezvous relay — the usual cause of "join never connects".
+  relayRedundancy: RELAYS.length,
+};
+
 // --- Host ------------------------------------------------------------------
 
 class HostClient implements Client {
@@ -61,7 +79,7 @@ class HostClient implements Client {
     if (!resume) seatPlayer(this.state, me.playerId, me.name, 0);
     this.connected.add(me.playerId);
 
-    this.room = joinRoom({ appId: APP_ID }, roomKey);
+    this.room = joinRoom(ROOM_CONFIG, roomKey);
     // Trystero's generic wants a JSON index-signature type; our structs are
     // JSON-serializable at runtime, so we type at this boundary and use `any`.
     const [sendState] = this.room.makeAction<any>("st");
@@ -239,7 +257,7 @@ class GuestClient implements Client {
     readonly roomKey: string,
     private me: Identity,
   ) {
-    this.room = joinRoom({ appId: APP_ID }, roomKey);
+    this.room = joinRoom(ROOM_CONFIG, roomKey);
     const [sendCmd] = this.room.makeAction<any>("cmd");
     const [, getState] = this.room.makeAction<any>("st");
     this.sendCmd = (c) => void sendCmd(c);

@@ -383,6 +383,41 @@ input:focus-visible {
   gap: 12px;
 }
 
+.connecting {
+  text-align: center;
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  margin: 6px auto 18px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--gold);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.conn-title {
+  font-family: var(--ff-display);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.conn-key {
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--chip-ink);
+  margin-bottom: 14px;
+}
+.conn-msg {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
 /* ============================================================
    Table screen
    ============================================================ */
