@@ -1199,7 +1199,14 @@ input:focus-visible {
 .my-cards.peekable {
   cursor: pointer;
   touch-action: none;
+}
+/* Kill iOS long-press selection / callout on the peek cards and everything in them. */
+.my-cards.peekable,
+.my-cards.peekable * {
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 /* Flip cards: face-down by default, reveal on .revealed */
 .flip {

@@ -458,15 +458,22 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
       ...seat.holeCards.map((c) => flipCard(c, { big: true, dim: folded, anim: animHole })),
       h("div", { class: "peek-hint" }, mode === "tap" ? "tap to reveal" : "hold to peek"),
     );
+    const reveal = () => el.classList.add("revealed");
+    const hide = () => el.classList.remove("revealed");
+    // Kill the iOS long-press callout / selection regardless of mode.
+    el.addEventListener("contextmenu", (e) => e.preventDefault());
     if (mode === "tap") {
       el.addEventListener("click", () => el.classList.toggle("revealed"));
     } else {
-      const reveal = (e: Event) => { e.preventDefault(); el.classList.add("revealed"); };
-      const hide = () => el.classList.remove("revealed");
-      el.addEventListener("pointerdown", reveal);
-      el.addEventListener("pointerup", hide);
-      el.addEventListener("pointerleave", hide);
-      el.addEventListener("pointercancel", hide);
+      // Explicit touch (mobile) + mouse (desktop) so nothing double-fires;
+      // preventDefault on touchstart suppresses iOS selection and the mouse
+      // emulation, so the desktop mouse* handlers never run on a phone.
+      el.addEventListener("touchstart", (e) => { e.preventDefault(); reveal(); }, { passive: false });
+      el.addEventListener("touchend", (e) => { e.preventDefault(); hide(); }, { passive: false });
+      el.addEventListener("touchcancel", hide);
+      el.addEventListener("mousedown", reveal);
+      el.addEventListener("mouseup", hide);
+      el.addEventListener("mouseleave", hide);
     }
     cardsEl = el;
   } else if (dealt) {
