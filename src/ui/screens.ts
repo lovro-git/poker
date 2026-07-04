@@ -229,21 +229,35 @@ function seatCoords(relPos: number, total: number): { left: number; top: number 
   return { left, top };
 }
 
-/** A seat pod on the felt. Your own hole cards live in the footer, not here. */
+/** First alphanumeric character of a name, uppercased (for the avatar). */
+function initial(name: string): string {
+  const m = name.trim().match(/[a-z0-9]/i);
+  return (m ? m[0] : "?").toUpperCase();
+}
+
+/** Deterministic avatar colour from a name. */
+function avatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return `hsl(${hash % 360} 52% 46%)`;
+}
+
+/** A seat pod on the felt: a round avatar with name + chips. Your own hole cards
+ *  live in the footer; opponents' cards fan out behind the avatar at showdown. */
 function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   const seat = view.seats[i];
-  if (!seat) return h("div", { class: "pod pod-empty" }, "Open");
+  if (!seat) return h("div", { class: "pod avatar-pod is-empty" }, h("div", { class: "av av-empty" }));
 
   const isMe = i === view.yourSeat;
   const acting = view.stage !== "showdown" && view.toActSeat === i;
   const isWinner = view.stage === "showdown" && !!view.result?.pots.some((p) => p.winners.includes(i));
   const dealt = seat.status === "active" || seat.status === "allin" || seat.status === "folded";
   const inactive = !dealt || seat.status === "folded";
-  const cls = ["pod", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
+  const cls = ["pod", "avatar-pod", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner", !seat.connected && "is-off"]
     .filter(Boolean).join(" ");
 
-  // Opponents' cards sit inside the pod. On crowded tables (7-8 seats) we drop the
-  // face-down backs to keep pods tiny — their cards still appear at showdown.
+  // Fan opponents' cards behind the avatar. On crowded tables (7-8) we drop the
+  // face-down backs; their cards still appear at showdown.
   const crowded = view.config.maxSeats >= 7;
   const faces = seat.holeCards && !seat.mucked;
   let cards: HTMLElement | null = null;
@@ -259,17 +273,19 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   if (seat.isSB) badges.push("SB");
   if (seat.isBB) badges.push("BB");
 
-  return h("div", { class: cls },
+  const av = h("div", { class: "av" },
+    h("div", { class: "av-ring" }),
+    h("div", { class: "av-face", style: `--av-color:${avatarColor(seat.name)}` }, initial(seat.name)),
+    !seat.connected ? h("span", { class: "av-off", title: "Disconnected" }) : null,
     badges.length ? h("div", { class: "pod-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
+  );
+
+  return h("div", { class: cls },
     cards,
-    h("div", { class: "pod-body" },
-      h("div", { class: "pod-name" },
-        !seat.connected && h("span", { class: "pod-off", title: "Disconnected" }, "●"),
-        h("span", { class: "pod-nametxt" }, seat.name + (isMe ? " (you)" : "")),
-      ),
-      h("div", { class: "pod-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
-      playerActionCell(view, i, seat),
-    ),
+    av,
+    h("div", { class: "pod-name" }, h("span", { class: "pod-nametxt" }, seat.name + (isMe ? " (you)" : ""))),
+    h("div", { class: "pod-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
+    playerActionCell(view, i, seat),
     seat.committedRound > 0 ? h("div", { class: "pod-bet" }, chipBadge(seat.committedRound)) : null,
   );
 }
@@ -580,10 +596,8 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
     for (let i = 0; i < total; i++) {
       const relPos = (i - anchor + total) % total;
       const { left, top } = seatCoords(relPos, total);
-      // Left/right edge seats use a horizontal pod so they take less vertical room.
-      const side = left < 28 ? " is-left" : left > 72 ? " is-right" : "";
       arena.append(
-        h("div", { class: `seat${side}`, style: `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%` }, seatPod(view, i, winSet)),
+        h("div", { class: "seat", style: `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%` }, seatPod(view, i, winSet)),
       );
     }
     body = arena;

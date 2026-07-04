@@ -44,7 +44,8 @@
   /* Cards scale with the viewport so the layout never restructures. */
   --card-big-w: clamp(58px, 9.5vw, 116px); /* my hole cards (footer) */
   --card-board-w: clamp(56px, 7vw, 100px); /* community cards — standardized, big */
-  --card-sm-w: clamp(26px, 4vw, 40px); /* opponents' pod cards */
+  --card-sm-w: clamp(24px, 3.4vw, 36px); /* opponents' fanned pod cards */
+  --av-size: clamp(48px, 6vw, 78px); /* seat avatar disc */
 
   --ff-display: "Space Grotesk", system-ui, sans-serif;
   --ff-body: "Inter", system-ui, sans-serif;
@@ -657,144 +658,163 @@ input:focus-visible {
 .seat {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: clamp(96px, 13vw, 148px);
   z-index: 2;
 }
-.seat.is-left,
-.seat.is-right {
-  width: clamp(118px, 15vw, 168px);
-}
-/* Crowded tables: smaller pods and cards so everything fits. */
+/* Crowded tables: smaller avatars so everything fits. */
 .arena[data-seats="7"],
 .arena[data-seats="8"] {
-  --card-sm-w: clamp(15px, 3.7vw, 22px);
+  --av-size: clamp(38px, 5vw, 58px);
+  --card-sm-w: clamp(18px, 2.6vw, 28px);
 }
-.arena[data-seats="7"] .seat,
-.arena[data-seats="8"] .seat {
-  width: clamp(58px, 15vw, 80px);
-}
-.arena[data-seats="7"] .seat.is-left,
-.arena[data-seats="7"] .seat.is-right,
-.arena[data-seats="8"] .seat.is-left,
-.arena[data-seats="8"] .seat.is-right {
-  width: clamp(96px, 25vw, 132px);
-}
-.arena[data-seats="7"] .pod,
-.arena[data-seats="8"] .pod {
-  padding: 4px 6px;
-  gap: 2px;
-}
-.pod {
+/* --- Avatar-disc seat pod --- */
+.avatar-pod {
   position: relative;
-  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  background: rgba(8, 12, 11, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  padding: 6px 8px;
+  gap: 1px;
+  width: max-content;
+  max-width: calc(var(--av-size) * 2.4);
   color: var(--felt-ink);
   text-align: center;
-  transition: 0.18s;
+  transition: opacity 0.18s;
 }
-/* Side seats: horizontal pod (cards beside info) so they're shorter and edge-anchored. */
-.seat.is-left .pod,
-.seat.is-right .pod {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  text-align: left;
-  width: auto;
-  max-width: 100%;
+.avatar-pod.is-out {
+  opacity: 0.42;
 }
-.seat.is-left .pod-body,
-.seat.is-right .pod-body {
-  align-items: flex-start;
-}
-.seat.is-left {
-  transform: translate(0, -50%); /* anchor pod's left edge to the point */
-}
-.seat.is-right {
-  transform: translate(-100%, -50%); /* anchor pod's right edge to the point */
-}
-.pod-empty {
-  background: rgba(0, 0, 0, 0.14);
-  border-style: dashed;
-  border-color: rgba(255, 255, 255, 0.16);
-  color: var(--felt-ink-dim);
-  font-size: 11px;
-  padding: 14px 8px;
-}
-.pod.is-out {
-  opacity: 0.5;
-}
-.pod.is-me {
-  border-color: rgba(232, 180, 90, 0.5);
-}
-.pod.is-acting {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(232, 180, 90, 0.5);
-}
-.pod.is-winner {
-  border-color: var(--go);
-  box-shadow: 0 0 0 1px var(--go), 0 0 22px rgba(55, 211, 153, 0.55);
-}
-/* Cards sit inside the pod (in flow) so nothing overhangs onto neighbours/board. */
-.pod-cards {
-  display: flex;
-  gap: 3px;
-  justify-content: center;
+.av {
+  position: relative;
+  width: var(--av-size);
+  height: var(--av-size);
   flex: none;
 }
-.pod-body {
+.av-face {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: calc(var(--av-size) * 0.4);
+  color: #fff;
+  background: var(--av-color, #556);
+  box-shadow: inset 0 -3px 8px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+/* ring around the avatar (masked to an annulus) */
+.av-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  -webkit-mask: radial-gradient(circle, transparent calc(50% - 3px), #000 calc(50% - 3px));
+  mask: radial-gradient(circle, transparent calc(50% - 3px), #000 calc(50% - 3px));
+}
+.is-me .av-ring {
+  background: rgba(232, 180, 90, 0.6);
+}
+.is-off .av-ring {
+  background: rgba(130, 140, 150, 0.5);
+}
+.is-winner .av-ring {
+  background: var(--go);
+}
+.is-winner .av {
+  animation: winpulse 1s ease-in-out infinite;
+}
+/* acting: gold depletion arc, driven by --clock (set each tick by the ticker) */
+.is-acting .av-ring {
+  background: conic-gradient(var(--gold) calc(var(--clock, 1) * 360deg), rgba(255, 255, 255, 0.14) 0);
+}
+.is-acting .av-face {
+  box-shadow: inset 0 -3px 8px rgba(0, 0, 0, 0.35), 0 0 16px rgba(232, 180, 90, 0.65);
+}
+@keyframes winpulse {
+  50% {
+    transform: scale(1.06);
+  }
+}
+.av-empty {
+  border-radius: 50%;
+  border: 1.5px dashed rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.12);
+}
+.av-off {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 2px solid var(--felt-lo);
+  z-index: 2;
+}
+/* opponents' cards fan out behind the avatar */
+.avatar-pod .pod-cards {
+  position: absolute;
+  bottom: calc(var(--av-size) * 0.46);
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
+  gap: 0;
+  z-index: 0;
+}
+.avatar-pod .pod-cards .card:first-child {
+  transform: rotate(-10deg) translateX(24%);
+}
+.avatar-pod .pod-cards .card:last-child {
+  transform: rotate(10deg) translateX(-24%);
 }
 .pod-name {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  max-width: 100%;
+  max-width: calc(var(--av-size) * 2.3);
+  margin-top: 2px;
 }
 .pod-nametxt {
   font-family: var(--ff-display);
   font-weight: 600;
-  font-size: clamp(10.5px, 1.4vw, 13px);
+  font-size: clamp(10px, 1.35vw, 12.5px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-}
-.pod-off {
-  color: var(--red);
-  font-size: 8px;
-  flex: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 .pod-chips {
-  font-size: clamp(11px, 1.5vw, 13.5px);
+  font-size: clamp(10.5px, 1.4vw, 13px);
   color: var(--gold-soft);
   font-family: var(--ff-display);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
+/* D/SB/BB chips on the avatar's bottom-left corner */
 .pod-pos {
   position: absolute;
-  top: -9px;
-  right: -9px;
+  bottom: -3px;
+  left: -5px;
   display: flex;
-  flex-direction: column;
   gap: 2px;
+  z-index: 3;
 }
+/* bet chips just below the pod */
 .pod-bet {
   position: absolute;
-  top: calc(100% + 4px); /* fully below the pod so it never covers the pill */
+  top: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
+}
+.avatar-pod .pl-clock {
+  display: none; /* the ring shows the countdown */
+}
+.avatar-pod .pill {
+  margin-top: 1px;
 }
 .pos-tag {
   font-family: var(--ff-display);
@@ -1433,22 +1453,12 @@ input:focus-visible {
     width: 94%;
     height: 92%;
   }
-  .seat {
-    width: clamp(64px, 18.5vw, 88px);
+  :root {
+    --av-size: clamp(44px, 12vw, 66px);
   }
-  .seat.is-left,
-  .seat.is-right {
-    width: clamp(102px, 29vw, 148px);
-  }
-  .arena[data-seats="7"] .seat,
-  .arena[data-seats="8"] .seat {
-    width: clamp(54px, 15vw, 74px);
-  }
-  .arena[data-seats="7"] .seat.is-left,
-  .arena[data-seats="7"] .seat.is-right,
-  .arena[data-seats="8"] .seat.is-left,
-  .arena[data-seats="8"] .seat.is-right {
-    width: clamp(90px, 25vw, 124px);
+  .arena[data-seats="7"],
+  .arena[data-seats="8"] {
+    --av-size: clamp(36px, 9vw, 52px);
   }
 
   /* list layout on phones: 3-across grid, community on top */
@@ -1547,11 +1557,8 @@ input:focus-visible {
 
 /* Very small phones: shrink pods further. */
 @media (max-width: 380px) {
-  .seat {
-    width: clamp(62px, 27vw, 84px);
-  }
-  .pod-name {
-    font-size: 10.5px;
+  :root {
+    --av-size: clamp(40px, 11vw, 56px);
   }
 }
 
@@ -1561,6 +1568,11 @@ input:focus-visible {
     --card-big-w: clamp(40px, 13vh, 66px);
     --card-board-w: clamp(34px, 11vh, 58px);
     --card-sm-w: clamp(15px, 4.6vh, 24px);
+    --av-size: clamp(40px, 13vh, 62px);
+  }
+  .arena[data-seats="7"],
+  .arena[data-seats="8"] {
+    --av-size: clamp(34px, 10vh, 50px);
   }
   .topbar {
     padding: 6px clamp(10px, 2vw, 18px);

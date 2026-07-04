@@ -124,10 +124,14 @@ function startClient(newClient: Client, roomKey: string) {
 
 function tickClock() {
   if (!view || view.actDeadline == null || view.stage === "showdown") return;
+  const remaining = view.actDeadline - Date.now();
+  const secs = Math.max(0, Math.ceil(remaining / 1000));
   const el = document.querySelector(".clock-num");
-  if (!el) return;
-  const secs = Math.max(0, Math.ceil((view.actDeadline - Date.now()) / 1000));
-  el.textContent = `${secs}s`;
+  if (el) el.textContent = `${secs}s`;
+  // Drive the avatar's shot-clock ring on the acting pod.
+  const total = (view.config.shotClockSec || 45) * 1000;
+  const frac = Math.max(0, Math.min(1, remaining / total));
+  (document.querySelector(".pod.is-acting") as HTMLElement | null)?.style.setProperty("--clock", String(frac));
 }
 
 // --- Routing ---------------------------------------------------------------
