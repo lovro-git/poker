@@ -169,10 +169,6 @@ class HostClient implements Client {
     }
   }
 
-  private eligibleCount(): number {
-    return this.state.seats.filter((x) => x && x.chips > 0 && !x.sitOutNext).length;
-  }
-
   private afterChange() {
     const s = this.state;
     // Shot clock: (re)arm whenever the acting seat changes.
@@ -188,15 +184,11 @@ class HostClient implements Client {
       s.actDeadline = null;
     }
 
-    // Auto-advance hands.
-    if (!this.progressScheduled) {
-      if (s.stage === "showdown") {
-        this.progressScheduled = true;
-        setTimeout(() => this.nextHand(), 5000);
-      } else if (s.stage === "waiting" && this.eligibleCount() >= 2) {
-        this.progressScheduled = true;
-        setTimeout(() => this.nextHand(), 2000);
-      }
+    // Auto-advance only *between* hands (after a showdown). The very first hand
+    // waits for the host to press "Deal" — see start().
+    if (!this.progressScheduled && s.stage === "showdown") {
+      this.progressScheduled = true;
+      setTimeout(() => this.nextHand(), 5000);
     }
 
     this.persist();

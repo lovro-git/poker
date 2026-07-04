@@ -14,20 +14,22 @@ export interface CardOpts {
   big?: boolean;
   dim?: boolean; // not part of the winning five
   slot?: boolean; // empty placeholder outline
+  anim?: boolean; // play the deal-in animation (only for genuinely new cards)
 }
 
 /** Build a single playing-card element. */
 export function cardEl(card: Card | null, opts: CardOpts = {}): HTMLElement {
   const size = opts.big ? "card--big" : opts.small ? "card--sm" : "";
+  const anim = opts.anim ? "card--deal" : "";
   if (opts.slot) {
     return h("div", { class: `card card--slot ${size}`.trim() });
   }
   if (!card || opts.faceDown) {
-    return h("div", { class: `card card--back ${size}`.trim() }, h("div", { class: "card-weave" }));
+    return h("div", { class: `card card--back ${size} ${anim}`.trim() }, h("div", { class: "card-weave" }));
   }
   const suit = suitOf(card);
   const red = suit === "h" || suit === "d";
-  const cls = `card ${red ? "card--red" : "card--black"} ${size} ${opts.dim ? "is-dim" : ""}`;
+  const cls = `card ${red ? "card--red" : "card--black"} ${size} ${anim} ${opts.dim ? "is-dim" : ""}`;
   return h(
     "div",
     { class: cls.trim() },

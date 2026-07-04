@@ -127,8 +127,12 @@ input:focus-visible {
   border: 1px solid var(--card-border);
   box-shadow: 0 4px 12px rgba(20, 30, 50, 0.16);
   user-select: none;
-  animation: deal 0.26s ease both;
   flex: none;
+}
+/* Only cards explicitly marked as newly dealt animate — ordinary re-renders
+   (someone acts) must not replay this, or the whole board appears to flicker. */
+.card--deal {
+  animation: deal 0.26s ease both;
 }
 .card--sm {
   width: var(--card-sm-w);

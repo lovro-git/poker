@@ -114,6 +114,8 @@ export interface TableHandlers {
 export interface UIState {
   raiseTo: number;
   turnKey: string; // identifies the current decision, to reset the slider
+  prevBoardLen: number; // to animate only newly dealt community cards
+  prevHand: number; // to animate hole cards only on a fresh hand
 }
 
 const STAGE_LABEL: Record<string, string> = {
@@ -211,12 +213,14 @@ function centerMessage(view: ClientView): string {
   return "";
 }
 
-function community(view: ClientView, winSet: Set<Card>): HTMLElement {
+function community(view: ClientView, winSet: Set<Card>, animFrom: number): HTMLElement {
   const slots: HTMLElement[] = [];
   for (let k = 0; k < 5; k++) {
     const card = view.board[k];
     slots.push(
-      card ? cardEl(card, { big: true, dim: winSet.size > 0 && !winSet.has(card) }) : cardEl(null, { big: true, slot: true }),
+      card
+        ? cardEl(card, { big: true, dim: winSet.size > 0 && !winSet.has(card), anim: k >= animFrom })
+        : cardEl(null, { big: true, slot: true }),
     );
   }
   return h("div", { class: "community" }, ...slots);
@@ -336,14 +340,14 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
 
 // --- My cards + bar (bottom-right) -----------------------------------------
 
-function mine(view: ClientView, hs: TableHandlers): HTMLElement {
+function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLElement {
   const seat = view.yourSeat >= 0 ? view.seats[view.yourSeat] : null;
   const dealt = seat && (seat.status === "active" || seat.status === "allin" || seat.status === "folded");
 
   let cardsEl: HTMLElement;
   if (seat?.holeCards) {
     const folded = seat.status === "folded";
-    cardsEl = h("div", { class: "my-cards" }, ...seat.holeCards.map((c) => cardEl(c, { big: true, dim: folded })));
+    cardsEl = h("div", { class: "my-cards" }, ...seat.holeCards.map((c) => cardEl(c, { big: true, dim: folded, anim: animHole })));
   } else if (dealt) {
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, faceDown: true }), cardEl(null, { big: true, faceDown: true }));
   } else {
@@ -391,6 +395,14 @@ function mine(view: ClientView, hs: TableHandlers): HTMLElement {
 export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs: TableHandlers): void {
   const winSet = winningCards(view);
 
+  // Animate only genuinely new cards: community cards past the previous count,
+  // and hole cards on a fresh hand. Everything else stays put (no flicker).
+  const sameHand = view.handNumber === ui.prevHand;
+  const animFrom = sameHand ? ui.prevBoardLen : 0;
+  const animHole = !sameHand;
+  ui.prevBoardLen = view.board.length;
+  ui.prevHand = view.handNumber;
+
   // Player list: occupied seats in seat order (you highlighted).
   const rows: HTMLElement[] = [];
   view.seats.forEach((seat, i) => {
@@ -405,7 +417,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
 
   const tableMain = h("div", { class: "table-main" },
     h("div", { class: "pot" }, h("span", { class: "chipbadge-dot" }), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString())),
-    community(view, winSet),
+    community(view, winSet, animFrom),
     h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? ""),
     h("div", { class: "msg" }, centerMessage(view)),
   );
@@ -429,7 +441,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         leaveBtn,
       ),
       h("div", { class: "stage-wrap" }, players, tableMain),
-      h("div", { class: "dock" }, controls(view, ui, hs), mine(view, hs)),
+      h("div", { class: "dock" }, controls(view, ui, hs), mine(view, hs, animHole)),
     ),
   );
 }

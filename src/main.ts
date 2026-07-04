@@ -43,7 +43,7 @@ function linkFor(key: string): string {
 
 let client: Client | null = null;
 let view: ClientView | null = null;
-const ui: UIState = { raiseTo: 0, turnKey: "" };
+const ui: UIState = { raiseTo: 0, turnKey: "", prevBoardLen: 0, prevHand: 0 };
 let clockTimer: ReturnType<typeof setInterval> | null = null;
 
 function toast(text: string) {
