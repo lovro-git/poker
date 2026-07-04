@@ -596,9 +596,12 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
     for (let i = 0; i < total; i++) {
       const relPos = (i - anchor + total) % total;
       const { left, top } = seatCoords(relPos, total);
-      arena.append(
-        h("div", { class: "seat", style: `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%` }, seatPod(view, i, winSet)),
-      );
+      // Unit vector toward the table centre, so bet chips sit in front of the
+      // player (toward the pot) instead of below the pod.
+      const dx = 50 - left, dy = 44 - top;
+      const len = Math.hypot(dx, dy) || 1;
+      const style = `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;--ux:${(dx / len).toFixed(3)};--uy:${(dy / len).toFixed(3)}`;
+      arena.append(h("div", { class: "seat", style }, seatPod(view, i, winSet)));
     }
     body = arena;
   }

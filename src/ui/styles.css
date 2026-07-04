@@ -805,10 +805,15 @@ input:focus-visible {
 /* bet chips just below the pod */
 .pod-bet {
   position: absolute;
-  top: calc(100% + 2px);
   left: 50%;
-  transform: translateX(-50%);
+  top: calc(var(--av-size) / 2);
+  --bet-r: calc(var(--av-size) * 0.7 + 15px);
+  transform: translate(
+    calc(-50% + var(--ux, 0) * var(--bet-r)),
+    calc(-50% + var(--uy, 0) * var(--bet-r))
+  );
   white-space: nowrap;
+  z-index: 4;
 }
 .avatar-pod .pl-clock {
   display: none; /* the ring shows the countdown */
