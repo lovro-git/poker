@@ -11,8 +11,8 @@
   --bg-2: #ffffff;
   --panel: #ffffff;
   --panel-2: #f2f4f7;
-  --line: #dbe0e7;
-  --line-soft: #e7ebf0;
+  --line: #b7c1cf;
+  --line-soft: #ccd4de;
 
   --text: #161a20;
   --muted: #5c6672;
@@ -24,7 +24,7 @@
   --go: #1f9d69;
   --go-ink: #1f9d69;
   --red: #e0454d;
-  --card-border: rgba(0, 0, 0, 0.1);
+  --card-border: rgba(0, 0, 0, 0.2);
 
   --r-card: clamp(7px, 1vw, 12px);
   --r-btn: 12px;
