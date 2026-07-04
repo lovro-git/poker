@@ -28,7 +28,7 @@ export function defaultConfig(overrides: Partial<TableConfig> = {}): TableConfig
     bigBlind: 20,
     blindLadder: DEFAULT_LADDER,
     shotClockSec: 45,
-    maxSeats: 9,
+    maxSeats: 6,
     ...overrides,
   };
 }

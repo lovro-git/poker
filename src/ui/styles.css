@@ -960,8 +960,8 @@ input:focus-visible {
    ============================================================ */
 @media (max-width: 640px) {
   :root {
-    --card-big-w: clamp(58px, 15.5vw, 92px);
-    --card-sm-w: clamp(30px, 7vw, 44px);
+    --card-big-w: clamp(46px, 12vw, 74px);
+    --card-sm-w: clamp(28px, 6.5vw, 40px);
   }
 
   .topbar {
@@ -1002,30 +1002,28 @@ input:focus-visible {
     padding: 10px;
   }
 
-  /* all players wrap into rows so none are hidden off-screen */
+  /* players in a fixed 3-across grid (6 max -> 2 rows) */
   .players {
     width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     overflow: visible;
     padding: 0;
   }
   .pl-row {
-    flex: none;
+    min-width: 0;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    min-width: 92px;
     gap: 5px;
-    padding: 8px;
+    padding: 8px 6px;
     border-radius: 14px;
   }
   .pl-row.is-open {
-    min-width: 76px;
+    min-width: 0;
     justify-content: center;
+    min-height: 74px;
   }
   .pl-info {
     flex: none;

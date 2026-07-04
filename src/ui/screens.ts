@@ -20,7 +20,7 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
   const buyIn = h("input", { class: "input", type: "number", value: "1000", min: "1" }) as HTMLInputElement;
   const sb = h("input", { class: "input", type: "number", value: "10", min: "1" }) as HTMLInputElement;
   const bb = h("input", { class: "input", type: "number", value: "20", min: "2" }) as HTMLInputElement;
-  const seats = h("input", { class: "input", type: "number", value: "6", min: "2", max: "9" }) as HTMLInputElement;
+  const seats = h("input", { class: "input", type: "number", value: "6", min: "2", max: "6" }) as HTMLInputElement;
   const clock = h("input", { class: "input", type: "number", value: "45", min: "10" }) as HTMLInputElement;
   const errEl = h("div", { class: "err" }, err);
 
@@ -48,7 +48,7 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
       buyIn: Math.max(1, +buyIn.value | 0),
       sb: Math.max(1, +sb.value | 0),
       bb: Math.max(2, +bb.value | 0),
-      seats: Math.min(9, Math.max(2, +seats.value | 0)),
+      seats: Math.min(6, Math.max(2, +seats.value | 0)),
       clock: Math.max(10, +clock.value | 0),
     });
   };
@@ -441,16 +441,10 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   ui.prevBoardLen = view.board.length;
   ui.prevHand = view.handNumber;
 
-  // Player list: occupied seats in seat order (you highlighted).
-  const rows: HTMLElement[] = [];
-  view.seats.forEach((seat, i) => {
-    if (seat) rows.push(playerRow(view, i, winSet));
-  });
-  const openCount = view.seats.filter((s) => s === null).length;
+  // All seats (empty ones fill out the 3-across grid on mobile).
   const players = h("div", { class: "players" },
     h("div", { class: "players-head" }, "Players"),
-    ...rows,
-    openCount > 0 && h("div", { class: "players-open" }, `${openCount} open seat${openCount > 1 ? "s" : ""}`),
+    ...view.seats.map((_, i) => playerRow(view, i, winSet)),
   );
 
   const tableMain = h("div", { class: "table-main" },
