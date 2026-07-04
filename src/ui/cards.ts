@@ -1,5 +1,5 @@
 import { rankValue, suitOf, SUIT_SYMBOL, type Card } from "../engine/cards";
-import { h } from "./dom";
+import { h, icon } from "./dom";
 
 const RANK_LABEL: Record<number, string> = { 14: "A", 13: "K", 12: "Q", 11: "J", 10: "10" };
 
@@ -41,12 +41,21 @@ export function cardEl(card: Card | null, opts: CardOpts = {}): HTMLElement {
   );
 }
 
+/** A face-down card that flips to reveal `card` when its container gets .revealed. */
+export function flipCard(card: Card, opts: CardOpts = {}): HTMLElement {
+  const back = cardEl(null, { ...opts, faceDown: true });
+  back.classList.add("flip-back");
+  const face = cardEl(card, opts);
+  face.classList.add("flip-face");
+  return h("div", { class: `flip${opts.big ? " flip--big" : ""}` }, h("div", { class: "flip-inner" }, back, face));
+}
+
 /** A small chip-stack badge showing an amount (bets and the pot). */
 export function chipBadge(amount: number, cls = ""): HTMLElement {
   return h(
     "div",
     { class: `chipbadge ${cls}`.trim() },
-    h("span", { class: "chipbadge-dot" }),
+    icon("coins"),
     h("span", { class: "chipbadge-amt tnum" }, amount.toLocaleString("en-US")),
   );
 }

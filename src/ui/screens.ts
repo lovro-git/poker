@@ -1,7 +1,7 @@
 import type { Card } from "../engine/cards";
 import type { Format, PlayerAction } from "../engine/types";
-import { cardEl, chipBadge } from "./cards";
-import { chips, clear, h, themeToggle } from "./dom";
+import { cardEl, chipBadge, flipCard } from "./cards";
+import { chips, clear, h, icon, themeToggle } from "./dom";
 import type { ClientView, PublicSeat } from "../net/protocol";
 
 // --- Lobby -----------------------------------------------------------------
@@ -16,7 +16,7 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
   let format: Format = "cash";
 
   const nameInput = h("input", { class: "input", placeholder: "e.g. Alex", value: savedName, maxlength: 20 }) as HTMLInputElement;
-  const keyInput = h("input", { class: "input", placeholder: "PKR-XXXX", value: initialKey }) as HTMLInputElement;
+  const keyInput = h("input", { class: "input", placeholder: "PKR-XXXX", value: initialKey || "PKR-" }) as HTMLInputElement;
   const buyIn = h("input", { class: "input", type: "number", value: "1000", min: "1" }) as HTMLInputElement;
   const sb = h("input", { class: "input", type: "number", value: "10", min: "1" }) as HTMLInputElement;
   const bb = h("input", { class: "input", type: "number", value: "20", min: "2" }) as HTMLInputElement;
@@ -224,7 +224,7 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
         !seat.connected && h("span", { class: "pod-off", title: "Disconnected" }, "●"),
         seat.name + (isMe ? " (you)" : ""),
       ),
-      h("div", { class: "pod-chips tnum" }, chips(seat.chips)),
+      h("div", { class: "pod-chips" }, icon("coins"), h("span", { class: "tnum" }, chips(seat.chips))),
       playerActionCell(view, i, seat),
     ),
     seat.committedRound > 0 ? h("div", { class: "pod-bet" }, chipBadge(seat.committedRound)) : null,
@@ -391,7 +391,18 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
   let cardsEl: HTMLElement;
   if (seat?.holeCards) {
     const folded = seat.status === "folded";
-    cardsEl = h("div", { class: "my-cards" }, ...seat.holeCards.map((c) => cardEl(c, { big: true, dim: folded, anim: animHole })));
+    // Hidden by default — press and hold (or click) to peek.
+    const el = h("div", { class: "my-cards peekable" },
+      ...seat.holeCards.map((c) => flipCard(c, { big: true, dim: folded, anim: animHole })),
+      h("div", { class: "peek-hint" }, "hold to peek"),
+    );
+    const reveal = (e: Event) => { e.preventDefault(); el.classList.add("revealed"); };
+    const hide = () => el.classList.remove("revealed");
+    el.addEventListener("pointerdown", reveal);
+    el.addEventListener("pointerup", hide);
+    el.addEventListener("pointerleave", hide);
+    el.addEventListener("pointercancel", hide);
+    cardsEl = el;
   } else if (dealt) {
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, faceDown: true }), cardEl(null, { big: true, faceDown: true }));
   } else if (seat) {
@@ -432,7 +443,7 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
     cardsEl,
     h("div", { class: "my-bar" },
       seat ? h("span", { class: "my-name" }, seat.name) : null,
-      seat ? h("span", { class: "my-chips tnum" }, chips(seat.chips)) : null,
+      seat ? h("span", { class: "my-chips" }, icon("coins"), h("span", { class: "tnum" }, chips(seat.chips))) : null,
       ...buttons,
     ),
   );
@@ -453,7 +464,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
 
   // Felt arena: green oval, center (pot + board + status), seats around the edge.
   const center = h("div", { class: "center" },
-    h("div", { class: "pot" }, h("span", { class: "chipbadge-dot" }), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString())),
+    h("div", { class: "pot" }, icon("coins"), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString())),
     community(view, winSet, animFrom),
     h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? ""),
     h("div", { class: "msg" }, centerMessage(view)),
@@ -469,12 +480,12 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   const blinds = `${view.smallBlind}/${view.bigBlind}`;
   const meta = `${view.config.format === "tournament" ? "Tournament" : "Cash"} · blinds ${blinds}`;
 
-  const copyBtn = h("button", { class: "copy-btn", type: "button" },
+  const copyBtn = h("button", { class: "copy-btn", type: "button", title: "Copy invite link" },
+    icon("link"),
     h("span", { class: "copy-txt" }, "Copy link"),
-    h("span", { class: "copy-ico" }, "🔗"),
   );
   copyBtn.onclick = () => hs.copyLink();
-  const leaveBtn = h("button", { type: "button" }, "Leave");
+  const leaveBtn = h("button", { class: "leave-btn", type: "button" }, icon("right-from-bracket"), h("span", { class: "leave-txt" }, "Leave"));
   leaveBtn.onclick = () => hs.leave();
 
   clear(root).append(

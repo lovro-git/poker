@@ -26,6 +26,11 @@ export function clear(node: HTMLElement): HTMLElement {
   return node;
 }
 
+/** A Font Awesome icon element, e.g. icon("coins"). */
+export function icon(name: string, style: "solid" | "regular" = "solid"): HTMLElement {
+  return h("i", { class: `fa-${style} fa-${name}`, "aria-hidden": "true" });
+}
+
 /** Format a chip count compactly: 1500 -> "1.5k", 20 -> "20". */
 export function chips(n: number): string {
   if (n >= 10000) return `${Math.round(n / 1000)}k`;
@@ -57,7 +62,7 @@ export function toggleTheme(): "light" | "dark" {
 /** A round icon button that flips light/dark; re-renders its own glyph. */
 export function themeToggle(cls = ""): HTMLElement {
   const btn = h("button", { class: cls, type: "button", title: "Toggle light / dark" });
-  const paint = () => (btn.textContent = getTheme() === "dark" ? "☀" : "☾");
+  const paint = () => btn.replaceChildren(icon(getTheme() === "dark" ? "sun" : "moon"));
   btn.addEventListener("click", () => {
     toggleTheme();
     paint();

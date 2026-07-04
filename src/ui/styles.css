@@ -240,6 +240,35 @@ input:focus-visible {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, var(--gold-soft), #b9812f);
 }
+.chipbadge i {
+  font-size: 11px;
+}
+
+/* Icon + text alignment for chip counts and topbar buttons */
+.pod-chips,
+.my-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.pod-chips {
+  justify-content: center;
+}
+.pod-chips i,
+.my-chips i {
+  font-size: 0.82em;
+  opacity: 0.85;
+}
+.pot i {
+  color: var(--gold-soft);
+  font-size: 0.95em;
+}
+.copy-btn,
+.leave-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 
 /* ============================================================
    Lobby
@@ -512,17 +541,17 @@ input:focus-visible {
 .arena {
   flex: 1;
   min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(26px, 4.5vh, 46px) clamp(24px, 8vw, 60px);
+  position: relative;
   overflow: hidden;
 }
+/* Absolutely sized + centered inside the arena so it can never overflow into
+   the topbar or footer, regardless of flex quirks. */
 .felt-wrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  max-width: min(100%, 1080px);
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: min(92%, 960px);
+  height: min(90%, 620px);
 }
 .felt {
   position: absolute;
@@ -925,6 +954,58 @@ input:focus-visible {
 .my-cards {
   display: flex;
   gap: 8px;
+  position: relative;
+}
+.my-cards.peekable {
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+/* Flip cards: face-down by default, reveal on .revealed */
+.flip {
+  width: var(--card-big-w);
+  height: calc(var(--card-big-w) * 1.4);
+  perspective: 800px;
+  transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.42s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.flip-back,
+.flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-face {
+  transform: rotateY(180deg);
+}
+.peekable.revealed .flip-inner {
+  transform: rotateY(180deg);
+}
+.peekable.revealed .flip {
+  transform: translateY(-8px) scale(1.05);
+}
+.peek-hint {
+  position: absolute;
+  bottom: -16px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.peekable.revealed .peek-hint {
+  opacity: 0;
 }
 .my-cards .placeholder {
   color: var(--dim);
@@ -1027,12 +1108,9 @@ input:focus-visible {
   }
   .tb-meta,
   .tb-room-label,
-  .copy-txt {
+  .copy-txt,
+  .leave-txt {
     display: none;
-  }
-  .copy-ico {
-    display: inline;
-    font-size: 13px;
   }
   .tb-key {
     padding: 3px 4px 3px 12px;
@@ -1049,8 +1127,9 @@ input:focus-visible {
     height: 32px;
   }
 
-  .arena {
-    padding: clamp(8px, 1.6vh, 16px) clamp(14px, 5vw, 30px);
+  .felt-wrap {
+    width: 94%;
+    height: 94%;
   }
   .seat {
     width: clamp(70px, 24vw, 104px);
