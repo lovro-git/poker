@@ -379,7 +379,7 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
   } else if (dealt) {
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, faceDown: true }), cardEl(null, { big: true, faceDown: true }));
   } else {
-    cardsEl = h("div", { class: "my-cards" }, h("span", { class: "placeholder" }, view.yourSeat < 0 ? "Spectating" : "Sitting out this hand"));
+    cardsEl = h("div", { class: "my-cards" }, h("span", { class: "placeholder" }, view.yourSeat < 0 ? "Spectating" : "Waiting for next hand"));
   }
 
   const bar = h("div", { class: "my-bar" });
@@ -402,10 +402,6 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
       b.onclick = () => hs.rebuy();
       bar.append(b);
     }
-    // Sit out toggle.
-    const so = h("button", { class: `mini-btn ${seat.sitOutNext ? "on" : ""}`, type: "button" }, seat.sitOutNext ? "Sitting out" : "Sit out");
-    so.onclick = () => hs.sitOut(!seat.sitOutNext);
-    bar.append(so);
   }
 
   return h("div", { class: "mine" },
@@ -453,7 +449,10 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   const blinds = `${view.smallBlind}/${view.bigBlind}`;
   const meta = `${view.config.format === "tournament" ? "Tournament" : "Cash"} · blinds ${blinds}`;
 
-  const copyBtn = h("button", { type: "button" }, "Copy link");
+  const copyBtn = h("button", { class: "copy-btn", type: "button" },
+    h("span", { class: "copy-txt" }, "Copy link"),
+    h("span", { class: "copy-ico" }, "🔗"),
+  );
   copyBtn.onclick = () => hs.copyLink();
   const leaveBtn = h("button", { type: "button" }, "Leave");
   leaveBtn.onclick = () => hs.leave();
@@ -462,7 +461,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
     h("div", { class: "table-screen" },
       h("div", { class: "topbar" },
         h("span", { class: "tb-brand" }, "Hold'em"),
-        h("span", { class: "tb-key" }, "Room ", h("b", {}, roomKeyFromHash()), copyBtn),
+        h("span", { class: "tb-key" }, h("span", { class: "tb-room-label" }, "Room "), h("b", {}, roomKeyFromHash()), copyBtn),
         h("span", { class: "tb-spacer" }),
         h("span", { class: "tb-meta" }, meta, view.spectatorCount > 0 ? ` · ${view.spectatorCount} watching` : "", " · hand ", h("b", {}, String(view.handNumber))),
         themeToggle("icon-btn"),

@@ -437,11 +437,15 @@ input:focus-visible {
 .tb-brand {
   font-family: var(--ff-display);
   font-weight: 700;
+  flex: none;
+  white-space: nowrap;
 }
 .tb-key {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: none;
+  white-space: nowrap;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -453,17 +457,22 @@ input:focus-visible {
   color: var(--text);
   font-family: var(--ff-display);
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 .tb-key button {
   background: var(--panel-2);
   border: 1px solid var(--line);
   color: var(--muted);
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   font-size: 12px;
+  white-space: nowrap;
 }
 .tb-key button:hover {
   color: var(--text);
+}
+.copy-ico {
+  display: none;
 }
 .tb-spacer {
   flex: 1;
@@ -939,21 +948,34 @@ input:focus-visible {
 
   .topbar {
     gap: 8px;
-    padding: 8px 10px;
+    padding: 9px 12px;
   }
   .tb-brand {
-    font-size: 14px;
+    font-size: 15px;
   }
   .tb-meta,
-  .players-head {
+  .players-head,
+  .tb-room-label,
+  .copy-txt {
     display: none;
   }
+  .copy-ico {
+    display: inline;
+    font-size: 13px;
+  }
   .tb-key {
-    padding: 3px 4px 3px 9px;
-    font-size: 11.5px;
+    padding: 3px 4px 3px 12px;
+    font-size: 12.5px;
+  }
+  .tb-key button {
+    padding: 5px 9px;
   }
   .topbar > button:last-child {
-    padding: 5px 10px;
+    padding: 6px 11px;
+  }
+  .icon-btn {
+    width: 32px;
+    height: 32px;
   }
 
   .stage-wrap {
@@ -1035,6 +1057,11 @@ input:focus-visible {
   .act {
     padding: 14px 6px;
     font-size: 15px;
+  }
+  .wait-note {
+    justify-content: center;
+    text-align: center;
+    padding: 12px 4px;
   }
 }
 
