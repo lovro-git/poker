@@ -1,8 +1,28 @@
 import { rankValue, suitOf, type Card, type Suit } from "../engine/cards";
-import { h, icon } from "./dom";
+import { h } from "./dom";
 
 const RANK_LABEL: Record<number, string> = { 14: "A", 13: "K", 12: "Q", 11: "J", 10: "10" };
-const SUIT_FA: Record<Suit, string> = { c: "club", d: "diamond", h: "heart", s: "spade" };
+
+// Inline SVG suit paths — Font Awesome Free lacks club/spade, so we draw our own.
+const SUIT_PATH: Record<Suit, string> = {
+  h: "M12 20.5C6.5 16 3 12.9 3 9.1 3 6.3 5.2 4 8 4c1.7 0 3.2.9 4 2.2C12.8 4.9 14.3 4 16 4c2.8 0 5 2.3 5 5.1 0 3.8-3.5 6.9-9 11.4z",
+  d: "M12 3l6.5 9L12 21 5.5 12z",
+  s: "M12 3C8.5 7.2 4.5 9.8 4.5 13.6c0 2.2 1.7 3.9 3.9 3.9 1 0 1.9-.4 2.6-1-.1 1.9-1 3.4-2.6 4.5h7.2c-1.6-1.1-2.5-2.6-2.6-4.5.7.6 1.6 1 2.6 1 2.2 0 3.9-1.7 3.9-3.9C19.5 9.8 15.5 7.2 12 3z",
+  c: "M12 3.2a3.1 3.1 0 0 0-2.55 4.86A3.1 3.1 0 1 0 8.9 14.1c.83 0 1.58-.32 2.14-.85-.13 1.9-1 3.35-2.54 4.55h7c-1.54-1.2-2.41-2.65-2.54-4.55.56.53 1.31.85 2.14.85a3.1 3.1 0 1 0-.55-6.04A3.1 3.1 0 0 0 12 3.2z",
+};
+
+function suitIcon(suit: Suit): SVGSVGElement {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("class", "suit-svg");
+  svg.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", SUIT_PATH[suit]);
+  path.setAttribute("fill", "currentColor");
+  svg.appendChild(path);
+  return svg;
+}
 
 function rankLabel(card: Card): string {
   const v = rankValue(card);
@@ -36,9 +56,9 @@ export function cardEl(card: Card | null, opts: CardOpts = {}): HTMLElement {
     { class: cls.trim() },
     h("div", { class: "card-corner" },
       h("span", { class: "card-rank" }, rankLabel(card)),
-      h("span", { class: "card-csuit" }, icon(SUIT_FA[suit])),
+      h("span", { class: "card-csuit" }, suitIcon(suit)),
     ),
-    !opts.small && h("div", { class: "card-pip" }, icon(SUIT_FA[suit])),
+    !opts.small && h("div", { class: "card-pip" }, suitIcon(suit)),
   );
 }
 

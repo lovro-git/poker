@@ -238,6 +238,12 @@ input:focus-visible {
   font-size: calc(var(--card-big-w) * 0.52);
   opacity: 0.9;
 }
+.suit-svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+  fill: currentColor;
+}
 .card--sm .card-corner {
   inset: 0;
   top: 0;
