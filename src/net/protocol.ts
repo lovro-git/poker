@@ -38,6 +38,7 @@ export interface PublicSeat {
   sitOutNext: boolean;
   lastAction: string;
   connected: boolean;
+  isButton: boolean;
   isSB: boolean;
   isBB: boolean;
   waitingToPlay: boolean; // seated but not dealt into the current hand
@@ -111,11 +112,13 @@ export function viewFor(state: GameState, ctx: ViewContext): ClientView {
       sitOutNext: seat.sitOutNext,
       lastAction: seat.lastAction,
       connected: ctx.connected.has(seat.playerId),
-      isSB: false, // set below
+      isButton: false, // set below
+      isSB: false,
       isBB: false,
       waitingToPlay: !dealt && seat.chips > 0 && !seat.sitOutNext,
     };
   });
+  if (state.buttonSeat >= 0 && seats[state.buttonSeat]) seats[state.buttonSeat]!.isButton = true;
   if (state.sbSeat >= 0 && seats[state.sbSeat]) seats[state.sbSeat]!.isSB = true;
   if (state.bbSeat >= 0 && seats[state.bbSeat]) seats[state.bbSeat]!.isBB = true;
 

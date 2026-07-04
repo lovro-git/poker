@@ -197,10 +197,13 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
       : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];
 
-  const pos = seat.isSB ? "SB" : seat.isBB ? "BB" : "";
+  const badges: string[] = [];
+  if (seat.isButton) badges.push("D");
+  if (seat.isSB) badges.push("SB");
+  if (seat.isBB) badges.push("BB");
 
   return h("div", { class: cls },
-    h("div", { class: `pl-pos ${pos.toLowerCase()}`.trim() }, pos),
+    h("div", { class: "pl-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))),
     h("div", { class: "pl-cards" }, ...cardEls),
     h("div", { class: "pl-info" },
       h("div", { class: "pl-name" },
