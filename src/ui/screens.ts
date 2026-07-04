@@ -203,9 +203,9 @@ function playerActionCell(view: ClientView, i: number, seat: PublicSeat): Node |
 
 /** Position a seat as a percentage around an ellipse; you sit at the bottom. */
 function seatStyle(relPos: number, total: number): string {
-  // Flattened ellipse; keep radii modest so pods don't clip the screen edges.
+  // Flattened ellipse; keep radii modest so pods don't clip edges or the board.
   const angle = Math.PI / 2 + (relPos / total) * Math.PI * 2;
-  const cx = 50, cy = 50, rx = 40, ry = 40;
+  const cx = 50, cy = 50, rx = 41, ry = 37;
   const left = cx + rx * Math.cos(angle);
   const top = cy + ry * Math.sin(angle);
   return `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%`;
