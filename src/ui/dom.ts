@@ -32,3 +32,36 @@ export function chips(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
   return String(n);
 }
+
+// --- Theme (light is the default) -----------------------------------------
+
+export function getTheme(): "light" | "dark" {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+}
+
+export function applyTheme(theme: "light" | "dark"): void {
+  document.documentElement.setAttribute("data-theme", theme);
+  try {
+    localStorage.setItem("holdem:theme", theme);
+  } catch {
+    /* storage disabled — non-fatal */
+  }
+}
+
+export function toggleTheme(): "light" | "dark" {
+  const next = getTheme() === "dark" ? "light" : "dark";
+  applyTheme(next);
+  return next;
+}
+
+/** A round icon button that flips light/dark; re-renders its own glyph. */
+export function themeToggle(cls = ""): HTMLElement {
+  const btn = h("button", { class: cls, type: "button", title: "Toggle light / dark" });
+  const paint = () => (btn.textContent = getTheme() === "dark" ? "☀" : "☾");
+  btn.addEventListener("click", () => {
+    toggleTheme();
+    paint();
+  });
+  paint();
+  return btn;
+}

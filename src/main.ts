@@ -1,4 +1,5 @@
 import "./ui/styles.css";
+import { applyTheme } from "./ui/dom";
 import { defaultConfig } from "./engine/game";
 import type { TableConfig } from "./engine/types";
 import { createGuest, createHost, resumeHost, type Client, type Identity } from "./net/room";
@@ -6,6 +7,9 @@ import type { ClientView } from "./net/protocol";
 import { renderLobby, renderTable, type TableHandlers, type UIState } from "./ui/screens";
 
 const root = document.getElementById("app")!;
+
+// Light is the default; restore the saved preference before first paint.
+applyTheme((localStorage.getItem("holdem:theme") as "light" | "dark") ?? "light");
 
 // --- Identity --------------------------------------------------------------
 

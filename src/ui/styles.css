@@ -1,10 +1,47 @@
 /* ============================================================
-   P2P Hold'em — clean, modern, single responsive layout
+   P2P Hold'em — clean, modern, light-default with dark mode
    Layout: players (left) · community cards (top) ·
            my cards (bottom-right) · controls (bottom-left)
    ============================================================ */
 
 :root {
+  /* Light theme (default) */
+  --app-bg: radial-gradient(130% 100% at 50% -20%, #ffffff 0%, #e8ebf0 62%);
+  --bg: #eceef2;
+  --bg-2: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #f2f4f7;
+  --line: #dbe0e7;
+  --line-soft: #e7ebf0;
+
+  --text: #161a20;
+  --muted: #5c6672;
+  --dim: #98a2ac;
+
+  --gold: #e0a83f;
+  --gold-soft: #f0cf94;
+  --chip-ink: #9a6f1d; /* gold text that reads on the background */
+  --go: #1f9d69;
+  --go-ink: #1f9d69;
+  --red: #e0454d;
+  --card-border: rgba(0, 0, 0, 0.1);
+
+  --r-card: clamp(7px, 1vw, 12px);
+  --r-btn: 12px;
+  --r-panel: 20px;
+  --shadow: 0 8px 26px rgba(20, 30, 50, 0.12);
+  --shadow-lg: 0 22px 55px rgba(20, 30, 50, 0.16);
+
+  /* Cards scale with the viewport so the layout never restructures. */
+  --card-big-w: clamp(56px, 10vw, 120px);
+  --card-sm-w: clamp(26px, 4.8vw, 40px);
+
+  --ff-display: "Space Grotesk", system-ui, sans-serif;
+  --ff-body: "Inter", system-ui, sans-serif;
+}
+
+:root[data-theme="dark"] {
+  --app-bg: radial-gradient(130% 100% at 50% -20%, #171b22 0%, #0e1013 60%);
   --bg: #0e1013;
   --bg-2: #14171c;
   --panel: #171b21;
@@ -18,22 +55,14 @@
 
   --gold: #e8b45a;
   --gold-soft: #f3d29a;
+  --chip-ink: #f3d29a;
   --go: #37d399;
+  --go-ink: #37d399;
   --red: #f26169;
-
-  --r-card: clamp(6px, 1vw, 11px);
-  --r-btn: 12px;
-  --r-panel: 20px;
+  --card-border: rgba(0, 0, 0, 0.06);
 
   --shadow: 0 8px 26px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 22px 55px rgba(0, 0, 0, 0.5);
-
-  /* Card sizes scale with the viewport so the layout never restructures. */
-  --card-big-w: clamp(46px, 8.5vw, 96px);
-  --card-sm-w: clamp(22px, 4.2vw, 34px);
-
-  --ff-display: "Space Grotesk", system-ui, sans-serif;
-  --ff-body: "Inter", system-ui, sans-serif;
 }
 
 * {
@@ -47,7 +76,7 @@ body {
 body {
   font-family: var(--ff-body);
   color: var(--text);
-  background: radial-gradient(130% 100% at 50% -20%, #171b22 0%, var(--bg) 60%), var(--bg);
+  background: var(--app-bg);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
@@ -70,6 +99,19 @@ input:focus-visible {
   font-family: var(--ff-display);
   font-feature-settings: "tnum" 1;
 }
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+.icon-btn:hover {
+  color: var(--text);
+  border-color: var(--dim);
+}
 
 /* ============================================================
    Cards
@@ -82,7 +124,8 @@ input:focus-visible {
   background: linear-gradient(160deg, #fff, #eceef0);
   color: #14181a;
   position: relative;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.42);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 12px rgba(20, 30, 50, 0.16);
   user-select: none;
   animation: deal 0.26s ease both;
   flex: none;
@@ -98,16 +141,18 @@ input:focus-visible {
   color: #1b2530;
 }
 .card.is-dim {
-  filter: saturate(0.55) brightness(0.8);
+  filter: saturate(0.55) brightness(0.85);
+  opacity: 0.7;
 }
 .card--slot {
   background: transparent;
-  border: 1.5px dashed rgba(255, 255, 255, 0.14);
+  border: 1.5px dashed var(--line);
   box-shadow: none;
 }
 .card--back {
   background: repeating-linear-gradient(45deg, #2b3948 0 6px, #243040 6px 12px);
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(20, 30, 50, 0.18);
+  border-color: transparent;
 }
 .card-weave {
   position: absolute;
@@ -138,7 +183,7 @@ input:focus-visible {
   display: grid;
   place-items: center;
   font-size: calc(var(--card-big-w) * 0.52);
-  opacity: 0.92;
+  opacity: 0.9;
 }
 .card--sm .card-corner {
   inset: 0;
@@ -165,14 +210,14 @@ input:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(232, 180, 90, 0.35);
+  background: var(--panel-2);
+  border: 1px solid rgba(224, 168, 63, 0.4);
   border-radius: 999px;
   padding: 2px 8px 2px 5px;
   font-family: var(--ff-display);
   font-feature-settings: "tnum" 1;
   font-size: 12px;
-  color: var(--gold-soft);
+  color: var(--chip-ink);
   white-space: nowrap;
 }
 .chipbadge-dot {
@@ -195,7 +240,7 @@ input:focus-visible {
 }
 .lobby-card {
   width: min(430px, 100%);
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--r-panel);
   box-shadow: var(--shadow-lg);
@@ -203,7 +248,7 @@ input:focus-visible {
 }
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   margin-bottom: 4px;
 }
@@ -221,10 +266,13 @@ input:focus-visible {
 .brand .suits .r {
   color: var(--red);
 }
+.brand-spacer {
+  flex: 1;
+}
 .lobby-sub {
   color: var(--muted);
   font-size: 14px;
-  margin: 0 0 24px;
+  margin: 8px 0 24px;
 }
 .field {
   margin-bottom: 16px;
@@ -254,7 +302,7 @@ input:focus-visible {
   display: grid;
   grid-auto-flow: column;
   gap: 6px;
-  background: var(--bg-2);
+  background: var(--bg);
   border: 1px solid var(--line);
   border-radius: var(--r-btn);
   padding: 4px;
@@ -268,9 +316,9 @@ input:focus-visible {
   transition: 0.15s;
 }
 .seg button.on {
-  background: var(--panel-2);
+  background: var(--panel);
   color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--line);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow);
 }
 .btn {
   width: 100%;
@@ -288,7 +336,7 @@ input:focus-visible {
   color: #2a1c05;
 }
 .btn-gold:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.04);
 }
 .btn-ghost {
   background: var(--panel-2);
@@ -340,7 +388,6 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
 }
-
 .topbar {
   display: flex;
   align-items: center;
@@ -387,7 +434,7 @@ input:focus-visible {
   color: var(--muted);
 }
 .tb-meta b {
-  color: var(--gold-soft);
+  color: var(--chip-ink);
   font-family: var(--ff-display);
 }
 .topbar > button:last-child {
@@ -402,7 +449,6 @@ input:focus-visible {
   color: var(--text);
 }
 
-/* main = players (left) + community (center/top) */
 .stage-wrap {
   flex: 1;
   min-height: 0;
@@ -410,9 +456,8 @@ input:focus-visible {
   gap: clamp(8px, 2vw, 22px);
   padding: clamp(8px, 2vw, 22px);
 }
-
 .players {
-  width: clamp(112px, 21vw, 210px);
+  width: clamp(120px, 21vw, 220px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -432,35 +477,36 @@ input:focus-visible {
   font-size: 12px;
   padding: 4px 6px;
 }
-
 .pl-row {
   display: flex;
   align-items: center;
   gap: 8px;
   background: var(--panel);
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: 14px;
   padding: 7px 9px;
+  box-shadow: var(--shadow);
   transition: 0.18s;
 }
 .pl-row.is-open {
   background: transparent;
   border-style: dashed;
+  box-shadow: none;
   color: var(--dim);
   justify-content: center;
   font-size: 12px;
   padding: 10px;
 }
 .pl-row.is-folded {
-  opacity: 0.42;
+  opacity: 0.45;
 }
 .pl-row.is-acting {
   border-color: var(--gold);
-  box-shadow: 0 0 0 1px var(--gold), 0 0 20px rgba(232, 180, 90, 0.22);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 20px rgba(224, 168, 63, 0.25);
 }
 .pl-row.is-winner {
   border-color: var(--go);
-  box-shadow: 0 0 0 1px var(--go), 0 0 20px rgba(55, 211, 153, 0.28);
+  box-shadow: 0 0 0 1px var(--go), 0 0 20px rgba(31, 157, 105, 0.28);
 }
 .pl-btn {
   width: 18px;
@@ -477,6 +523,7 @@ input:focus-visible {
   border-radius: 50%;
   height: 18px;
   line-height: 18px;
+  box-shadow: var(--shadow);
 }
 .pl-cards {
   display: flex;
@@ -487,7 +534,7 @@ input:focus-visible {
   width: var(--card-sm-w);
   height: calc(var(--card-sm-w) * 1.4);
   border-radius: 5px;
-  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border: 1px dashed var(--line);
 }
 .pl-info {
   min-width: 0;
@@ -510,7 +557,9 @@ input:focus-visible {
 }
 .pl-chips {
   font-size: 12px;
-  color: var(--gold-soft);
+  color: var(--chip-ink);
+  font-family: var(--ff-display);
+  font-feature-settings: "tnum" 1;
 }
 .pl-chip-u {
   color: var(--dim);
@@ -526,7 +575,7 @@ input:focus-visible {
 .pl-clock {
   font-family: var(--ff-display);
   font-size: 12px;
-  color: var(--gold);
+  color: var(--chip-ink);
 }
 .pill {
   font-family: var(--ff-display);
@@ -540,22 +589,21 @@ input:focus-visible {
 }
 .pill-raise,
 .pill-bet {
-  background: rgba(232, 180, 90, 0.16);
-  color: var(--gold-soft);
+  background: rgba(224, 168, 63, 0.16);
+  color: var(--chip-ink);
 }
 .pill-call {
-  background: rgba(55, 211, 153, 0.16);
-  color: var(--go);
+  background: rgba(31, 157, 105, 0.16);
+  color: var(--go-ink);
 }
 .pill-allin {
-  background: rgba(242, 97, 105, 0.18);
+  background: rgba(224, 69, 77, 0.16);
   color: var(--red);
 }
 .pill-fold {
   color: var(--dim);
 }
 
-/* community cards, near the top-center */
 .table-main {
   flex: 1;
   min-width: 0;
@@ -572,15 +620,16 @@ input:focus-visible {
   font-family: var(--ff-display);
   font-weight: 600;
   font-size: 14px;
-  color: var(--gold-soft);
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(232, 180, 90, 0.25);
+  color: var(--chip-ink);
+  background: var(--panel);
+  border: 1px solid rgba(224, 168, 63, 0.3);
   padding: 6px 15px 6px 10px;
   border-radius: 999px;
+  box-shadow: var(--shadow);
 }
 .community {
   display: flex;
-  gap: clamp(4px, 1vw, 12px);
+  gap: clamp(5px, 1vw, 13px);
 }
 .stage-label {
   font-family: var(--ff-display);
@@ -598,23 +647,30 @@ input:focus-visible {
 }
 
 /* ============================================================
-   Dock: controls (left) + my cards (right)
+   Dock: controls (left) + my cards (far right)
    ============================================================ */
 
 .dock {
   display: flex;
   align-items: flex-end;
-  gap: clamp(10px, 2vw, 20px);
-  padding: 12px clamp(10px, 2vw, 20px) 16px;
+  gap: clamp(10px, 3vw, 40px);
+  padding: 12px clamp(10px, 2vw, 24px) 16px;
   border-top: 1px solid var(--line-soft);
 }
 .controls {
-  flex: 1;
+  flex: 0 1 520px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 560px;
+}
+.mine {
+  margin-left: auto; /* push my cards to the far bottom-right */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex: none;
 }
 .action-row {
   display: flex;
@@ -627,8 +683,9 @@ input:focus-visible {
   font-weight: 600;
   font-size: 15px;
   border: 1px solid var(--line);
-  background: var(--panel-2);
+  background: var(--panel);
   color: var(--text);
+  box-shadow: var(--shadow);
   transition: 0.12s;
   display: flex;
   flex-direction: column;
@@ -646,17 +703,17 @@ input:focus-visible {
   transform: translateY(-1px);
 }
 .act:disabled {
-  opacity: 0.32;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 .act-fold {
-  border-color: rgba(242, 97, 105, 0.4);
+  border-color: rgba(224, 69, 77, 0.4);
 }
 .act-fold:hover:not(:disabled) {
-  background: rgba(242, 97, 105, 0.14);
+  background: rgba(224, 69, 77, 0.1);
 }
 .act-call {
-  border-color: rgba(55, 211, 153, 0.5);
+  border-color: rgba(31, 157, 105, 0.5);
 }
 .act-raise {
   background: linear-gradient(180deg, var(--gold-soft), var(--gold));
@@ -682,13 +739,14 @@ input:focus-visible {
   height: 20px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
   cursor: grab;
 }
 .slider::-moz-range-thumb {
   width: 20px;
   height: 20px;
-  border: none;
+  border: 1px solid var(--line);
   border-radius: 50%;
   background: #fff;
   cursor: grab;
@@ -699,7 +757,7 @@ input:focus-visible {
   font-size: 15px;
   width: 76px;
   text-align: center;
-  color: var(--gold-soft);
+  color: var(--chip-ink);
   background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -743,15 +801,6 @@ input:focus-visible {
     opacity: 0.3;
   }
 }
-
-/* my cards + info, bottom-right */
-.mine {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex: none;
-}
 .my-cards {
   display: flex;
   gap: 8px;
@@ -777,7 +826,7 @@ input:focus-visible {
 .my-chips {
   font-family: var(--ff-display);
   font-feature-settings: "tnum" 1;
-  color: var(--gold-soft);
+  color: var(--chip-ink);
   font-size: 13px;
 }
 .mini-btn {
@@ -793,8 +842,8 @@ input:focus-visible {
   border-color: var(--dim);
 }
 .mini-btn.on {
-  color: var(--gold-soft);
-  border-color: rgba(232, 180, 90, 0.5);
+  color: var(--chip-ink);
+  border-color: rgba(224, 168, 63, 0.55);
 }
 
 .toast {
@@ -802,12 +851,12 @@ input:focus-visible {
   top: 16px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--panel-2);
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 8px 16px;
   font-size: 13px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
   animation: fadeout 2s forwards;
   z-index: 20;
 }
@@ -821,15 +870,17 @@ input:focus-visible {
   }
 }
 
-/* Narrow phones: keep the SAME layout, just tighten spacing and let the
-   action buttons wrap if needed. No structural reflow. */
+/* Narrow phones: same layout, tighter spacing, buttons may wrap. */
 @media (max-width: 560px) {
   .tb-meta,
   .players-head {
     display: none;
   }
   .players {
-    width: clamp(96px, 30vw, 150px);
+    width: clamp(104px, 32vw, 160px);
+  }
+  .dock {
+    gap: 12px;
   }
   .act {
     padding: 12px 6px;

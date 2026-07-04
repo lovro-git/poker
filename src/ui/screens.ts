@@ -1,7 +1,7 @@
 import type { Card } from "../engine/cards";
 import type { Format, PlayerAction } from "../engine/types";
 import { cardEl, chipBadge } from "./cards";
-import { chips, clear, h } from "./dom";
+import { chips, clear, h, themeToggle } from "./dom";
 import type { ClientView, PublicSeat } from "../net/protocol";
 
 // --- Lobby -----------------------------------------------------------------
@@ -68,6 +68,8 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
         h("div", { class: "brand" },
           h("h1", {}, "Hold'em"),
           h("span", { class: "suits" }, h("span", {}, "♠"), h("span", { class: "r" }, "♥"), h("span", { class: "r" }, "♦"), h("span", {}, "♣")),
+          h("span", { class: "brand-spacer" }),
+          themeToggle("icon-btn"),
         ),
         h("p", { class: "lobby-sub" }, "Peer-to-peer poker. Create a room, share the key, deal in."),
         h("div", { class: "field" }, h("label", {}, "Your name"), nameInput),
@@ -423,6 +425,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         h("span", { class: "tb-key" }, "Room ", h("b", {}, roomKeyFromHash()), copyBtn),
         h("span", { class: "tb-spacer" }),
         h("span", { class: "tb-meta" }, meta, view.spectatorCount > 0 ? ` · ${view.spectatorCount} watching` : "", " · hand ", h("b", {}, String(view.handNumber))),
+        themeToggle("icon-btn"),
         leaveBtn,
       ),
       h("div", { class: "stage-wrap" }, players, tableMain),
