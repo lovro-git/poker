@@ -184,10 +184,12 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
   const isMe = i === view.yourSeat;
   const acting = view.stage !== "showdown" && view.toActSeat === i;
   const isWinner = view.stage === "showdown" && !!view.result?.pots.some((p) => p.winners.includes(i));
-  const cls = ["pl-row", seat.status === "folded" && "is-folded", acting && "is-acting", isWinner && "is-winner"]
+  const dealt = seat.status === "active" || seat.status === "allin" || seat.status === "folded";
+  // Grey out anyone out of the action: folded, or seated but not in this hand.
+  const inactive = !dealt || seat.status === "folded";
+  const cls = ["pl-row", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
     .filter(Boolean).join(" ");
 
-  const dealt = seat.status === "active" || seat.status === "allin" || seat.status === "folded";
   const faces = seat.holeCards && !isMe && !seat.mucked;
   const cardEls = !dealt
     ? [h("span", { class: "pl-nocards" }, "")]
@@ -195,8 +197,10 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
       : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];
 
+  const pos = seat.isSB ? "SB" : seat.isBB ? "BB" : "";
+
   return h("div", { class: cls },
-    h("div", { class: `pl-btn ${seat.isButton ? "on" : ""}` }, seat.isButton ? "D" : ""),
+    h("div", { class: `pl-pos ${pos.toLowerCase()}`.trim() }, pos),
     h("div", { class: "pl-cards" }, ...cardEls),
     h("div", { class: "pl-info" },
       h("div", { class: "pl-name" },

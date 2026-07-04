@@ -81,6 +81,8 @@ export interface GameState {
   config: TableConfig;
   seats: Array<Seat | null>; // length config.maxSeats
   buttonSeat: number; // dealer button seat index (-1 before first hand)
+  sbSeat: number; // small-blind seat this hand (-1 if none)
+  bbSeat: number; // big-blind seat this hand (-1 if none)
   stage: Stage;
   board: Card[];
   deck: Card[]; // remaining deck (host secret)

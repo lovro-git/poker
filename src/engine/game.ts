@@ -38,6 +38,8 @@ export function createGame(config: TableConfig): GameState {
     config,
     seats: Array.from({ length: config.maxSeats }, () => null),
     buttonSeat: -1,
+    sbSeat: -1,
+    bbSeat: -1,
     stage: "waiting",
     board: [],
     deck: [],
@@ -234,6 +236,8 @@ export function startHand(state: GameState, rng: () => number = Math.random): bo
   commit(state.seats[bbSeat]!, bb);
   state.seats[sbSeat]!.lastAction = "SB";
   state.seats[bbSeat]!.lastAction = "BB";
+  state.sbSeat = sbSeat;
+  state.bbSeat = bbSeat;
   state.currentBet = Math.max(
     state.seats[sbSeat]!.committedRound,
     state.seats[bbSeat]!.committedRound,

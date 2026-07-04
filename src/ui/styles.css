@@ -536,8 +536,8 @@ input:focus-visible {
   font-size: 12px;
   padding: 10px;
 }
-.pl-row.is-folded {
-  opacity: 0.45;
+.pl-row.is-out {
+  opacity: 0.5;
 }
 .pl-row.is-acting {
   border-color: var(--gold);
@@ -547,22 +547,28 @@ input:focus-visible {
   border-color: var(--go);
   box-shadow: 0 0 0 1px var(--go), 0 0 20px rgba(31, 157, 105, 0.28);
 }
-.pl-btn {
-  width: 18px;
+.pl-pos {
+  width: 26px;
   flex: none;
   font-family: var(--ff-display);
   font-weight: 700;
-  font-size: 11px;
-  color: var(--dim);
+  font-size: 10px;
   text-align: center;
+  color: transparent;
 }
-.pl-btn.on {
-  color: #14181a;
-  background: linear-gradient(180deg, #fff, #dfe3df);
-  border-radius: 50%;
-  height: 18px;
-  line-height: 18px;
-  box-shadow: var(--shadow);
+.pl-pos.sb,
+.pl-pos.bb {
+  border-radius: 6px;
+  padding: 3px 0;
+  line-height: 1;
+}
+.pl-pos.sb {
+  background: #b9c9e6;
+  color: #1a2740;
+}
+.pl-pos.bb {
+  background: var(--gold);
+  color: #2a1c05;
 }
 .pl-cards {
   display: flex;
@@ -944,19 +950,16 @@ input:focus-visible {
     padding: 10px;
   }
 
-  /* opponents as a horizontal scrolling strip */
+  /* all players wrap into rows so none are hidden off-screen */
   .players {
     width: 100%;
     flex-direction: row;
-    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
     gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 0 0 4px;
-    scrollbar-width: none;
-  }
-  .players::-webkit-scrollbar {
-    display: none;
+    overflow: visible;
+    padding: 0;
   }
   .pl-row {
     flex: none;
