@@ -6,7 +6,7 @@ import { renderTable, type TableHandlers, type UIState } from "./screens";
 
 const noop = () => {};
 const handlers: TableHandlers = {
-  act: noop, rebuy: noop, sitOut: noop, show: noop, start: noop, copyLink: noop, leave: noop, toggleLayout: noop,
+  act: noop, rebuy: noop, sitOut: noop, show: noop, start: noop, copyLink: noop, leave: noop, toggleLayout: noop, rerender: noop,
 };
 
 function freshUI(): UIState {

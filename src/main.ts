@@ -73,6 +73,9 @@ const handlers: TableHandlers = {
     setLayout(getLayout() === "list" ? "table" : "list");
     if (view) renderTable(root, view, ui, handlers);
   },
+  rerender: () => {
+    if (view) renderTable(root, view, ui, handlers);
+  },
   leave: () => {
     if (connectTimer) clearTimeout(connectTimer);
     connectTimer = null;

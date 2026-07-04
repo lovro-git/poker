@@ -1,7 +1,7 @@
 import type { Card } from "../engine/cards";
 import type { Format, PlayerAction } from "../engine/types";
 import { cardEl, chipBadge, chipDisc, flipCard } from "./cards";
-import { chips, clear, getLayout, h, icon, themeToggle } from "./dom";
+import { applyTheme, chips, clear, getLayout, getReveal, getTheme, h, icon, setLayout, setReveal, themeToggle } from "./dom";
 import type { ClientView, PublicSeat } from "../net/protocol";
 
 // --- Lobby -----------------------------------------------------------------
@@ -131,6 +131,28 @@ export interface TableHandlers {
   copyLink(): void;
   leave(): void;
   toggleLayout(): void;
+  rerender(): void;
+}
+
+/** A small settings popover: reveal mode, table view, and theme. */
+function settingsMenu(hs: TableHandlers): HTMLElement {
+  const gear = h("button", { class: "icon-btn", type: "button", title: "Settings" }, icon("gear"));
+  const seg = (label: string, opts: Array<[string, string]>, current: string, pick: (v: string) => void) =>
+    h("div", { class: "set-row" },
+      h("span", { class: "set-label" }, label),
+      h("div", { class: "seg seg-sm" }, ...opts.map(([v, l]) => {
+        const b = h("button", { class: v === current ? "on" : "", type: "button" }, l);
+        b.onclick = () => pick(v);
+        return b;
+      })),
+    );
+  const panel = h("div", { class: "settings-panel" },
+    seg("Reveal cards", [["hold", "Hold"], ["tap", "Tap"]], getReveal(), (v) => { setReveal(v as "hold" | "tap"); hs.rerender(); }),
+    seg("Table view", [["table", "Table"], ["list", "List"]], getLayout(), (v) => { setLayout(v as "table" | "list"); hs.rerender(); }),
+    seg("Theme", [["light", "Light"], ["dark", "Dark"]], getTheme(), (v) => { applyTheme(v as "light" | "dark"); hs.rerender(); }),
+  );
+  gear.onclick = (e) => { e.stopPropagation(); panel.classList.toggle("open"); };
+  return h("div", { class: "settings" }, gear, panel);
 }
 
 export interface UIState {
@@ -202,7 +224,8 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   const cls = ["pod", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
     .filter(Boolean).join(" ");
 
-  // Others' cards are shown on the felt; yours are in the footer.
+  // Opponents' cards sit inside the pod (in flow, so nothing overhangs and
+  // overlaps a neighbouring pod or the board). Your own cards live in the footer.
   let cards: HTMLElement | null = null;
   if (dealt && !isMe) {
     const faces = seat.holeCards && !seat.mucked;
@@ -219,11 +242,11 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
 
   return h("div", { class: cls },
     badges.length ? h("div", { class: "pod-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
-    cards,
     h("div", { class: "pod-body" },
+      cards,
       h("div", { class: "pod-name" },
         !seat.connected && h("span", { class: "pod-off", title: "Disconnected" }, "●"),
-        seat.name + (isMe ? " (you)" : ""),
+        h("span", { class: "pod-nametxt" }, seat.name + (isMe ? " (you)" : "")),
       ),
       h("div", { class: "pod-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
       playerActionCell(view, i, seat),
@@ -361,65 +384,59 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
   const facing = legal.toCall > 0;
   ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, ui.raiseTo || legal.minTo));
 
-  // Fold
-  const foldBtn = h("button", { class: "act act-fold", type: "button" }, "Fold");
+  const foldBtn = h("button", { class: "act act-fold", type: "button" }, icon("xmark"), h("span", {}, "Fold"));
   foldBtn.onclick = () => hs.act({ type: "fold" });
 
-  // Check / Call
   const midBtn = facing
-    ? h("button", { class: "act act-call", type: "button" }, "Call", h("small", {}, chips(legal.toCall)))
-    : h("button", { class: "act act-check", type: "button" }, "Check");
+    ? h("button", { class: "act act-call", type: "button" }, icon("check"), h("span", {}, `Call ${chips(legal.toCall)}`))
+    : h("button", { class: "act act-check", type: "button" }, icon("check"), h("span", {}, "Check"));
   (midBtn as HTMLButtonElement).onclick = () => hs.act(facing ? { type: "call" } : { type: "check" });
 
-  const row: HTMLElement = h("div", { class: "action-row" }, foldBtn, midBtn);
+  const row = h("div", { class: "action-row" }, foldBtn, midBtn);
 
   let raiseControls: HTMLElement | null = null;
   if (legal.canRaise) {
+    const raiseLbl = h("span", {}, "");
+    const raiseBtn = h("button", { class: "act act-raise", type: "button" }, icon("angles-up"), raiseLbl);
+    raiseBtn.onclick = () => hs.act({ type: "raise", to: ui.raiseTo });
+    row.append(raiseBtn);
+
     const amtEl = h("input", {
       class: "raise-amt tnum", type: "number", value: String(ui.raiseTo), min: String(legal.minTo), max: String(legal.maxTo),
     }) as HTMLInputElement;
     const slider = h("input", {
       class: "slider", type: "range", min: String(legal.minTo), max: String(legal.maxTo), value: String(ui.raiseTo), step: String(view.bigBlind || 1),
     }) as HTMLInputElement;
-    const setFill = () => {
-      const pct = ((ui.raiseTo - legal.minTo) / Math.max(1, legal.maxTo - legal.minTo)) * 100;
-      slider.style.setProperty("--fill", `${pct}%`);
-    };
+    const isAllIn = () => ui.raiseTo >= legal.maxTo;
+    const label = () => (isAllIn() ? "All in" : `${facing ? "Raise" : "Bet"} ${chips(ui.raiseTo)}`);
     const sync = (v: number) => {
       ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, Math.round(v)));
       slider.value = String(ui.raiseTo);
       amtEl.value = String(ui.raiseTo);
-      setFill();
-      raiseBtn.replaceChildren(document.createTextNode(raiseLabel()));
+      slider.style.setProperty("--fill", `${((ui.raiseTo - legal.minTo) / Math.max(1, legal.maxTo - legal.minTo)) * 100}%`);
+      raiseLbl.textContent = label();
     };
     slider.oninput = () => sync(+slider.value);
     amtEl.onchange = () => sync(+amtEl.value);
 
-    const isAllIn = () => ui.raiseTo >= legal.maxTo;
-    const raiseLabel = () => (isAllIn() ? "All in" : facing ? "Raise" : "Bet");
-    const raiseBtn = h("button", { class: "act act-raise", type: "button" }, raiseLabel());
-    raiseBtn.onclick = () => hs.act({ type: "raise", to: ui.raiseTo });
-    row.append(raiseBtn);
-
     const potAfter = view.pot + legal.toCall;
-    const preset = (label: string, to: number) => {
-      const b = h("button", { class: "chip-btn", type: "button" }, label);
+    const preset = (lbl: string, to: number) => {
+      const b = h("button", { class: "chip-btn", type: "button" }, lbl);
       b.onclick = () => sync(to);
       return b;
     };
-    raiseControls = h("div", {},
-      h("div", { class: "raise-row" }, slider, amtEl),
+    raiseControls = h("div", { class: "raise-controls" },
       h("div", { class: "presets" },
         preset("Min", legal.minTo),
         preset("½ Pot", view.currentBet + Math.round(potAfter / 2)),
         preset("Pot", view.currentBet + potAfter),
-        preset("All in", legal.maxTo),
+        preset("Max", legal.maxTo),
       ),
+      h("div", { class: "raise-row" }, slider, amtEl),
     );
-    setFill();
+    sync(ui.raiseTo);
   } else {
-    // Can only call all-in or fold.
-    row.append(h("button", { class: "act act-raise", type: "button", disabled: true }, "Raise"));
+    row.append(h("button", { class: "act act-raise", type: "button", disabled: true }, icon("angles-up"), h("span", {}, "Raise")));
   }
 
   return h("div", { class: "controls" }, row, raiseControls);
@@ -434,17 +451,22 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
   let cardsEl: HTMLElement;
   if (seat?.holeCards) {
     const folded = seat.status === "folded";
-    // Hidden by default — press and hold (or click) to peek.
+    // Hidden by default; reveal by holding (default) or tapping, per settings.
+    const mode = getReveal();
     const el = h("div", { class: "my-cards peekable" },
       ...seat.holeCards.map((c) => flipCard(c, { big: true, dim: folded, anim: animHole })),
-      h("div", { class: "peek-hint" }, "hold to peek"),
+      h("div", { class: "peek-hint" }, mode === "tap" ? "tap to reveal" : "hold to peek"),
     );
-    const reveal = (e: Event) => { e.preventDefault(); el.classList.add("revealed"); };
-    const hide = () => el.classList.remove("revealed");
-    el.addEventListener("pointerdown", reveal);
-    el.addEventListener("pointerup", hide);
-    el.addEventListener("pointerleave", hide);
-    el.addEventListener("pointercancel", hide);
+    if (mode === "tap") {
+      el.addEventListener("click", () => el.classList.toggle("revealed"));
+    } else {
+      const reveal = (e: Event) => { e.preventDefault(); el.classList.add("revealed"); };
+      const hide = () => el.classList.remove("revealed");
+      el.addEventListener("pointerdown", reveal);
+      el.addEventListener("pointerup", hide);
+      el.addEventListener("pointerleave", hide);
+      el.addEventListener("pointercancel", hide);
+    }
     cardsEl = el;
   } else if (dealt) {
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, faceDown: true }), cardEl(null, { big: true, faceDown: true }));
@@ -542,9 +564,6 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   copyBtn.onclick = () => hs.copyLink();
   const leaveBtn = h("button", { class: "leave-btn", type: "button" }, icon("right-from-bracket"), h("span", { class: "leave-txt" }, "Leave"));
   leaveBtn.onclick = () => hs.leave();
-  const layoutBtn = h("button", { class: "icon-btn", type: "button", title: "Switch layout" },
-    icon(layout === "table" ? "list-ul" : "table-cells-large"));
-  layoutBtn.onclick = () => hs.toggleLayout();
 
   clear(root).append(
     h("div", { class: "table-screen" },
@@ -553,8 +572,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         h("span", { class: "tb-key" }, h("span", { class: "tb-room-label" }, "Room "), h("b", {}, roomKeyFromHash()), copyBtn),
         h("span", { class: "tb-spacer" }),
         h("span", { class: "tb-meta" }, meta, view.spectatorCount > 0 ? ` · ${view.spectatorCount} watching` : "", " · hand ", h("b", {}, String(view.handNumber))),
-        layoutBtn,
-        themeToggle("icon-btn"),
+        settingsMenu(hs),
         leaveBtn,
       ),
       body,

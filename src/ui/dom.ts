@@ -73,6 +73,20 @@ export function setLayout(layout: "table" | "list"): void {
   }
 }
 
+// --- Reveal mode (hold vs. tap to peek at your cards) ----------------------
+
+export function getReveal(): "hold" | "tap" {
+  return localStorage.getItem("holdem:reveal") === "tap" ? "tap" : "hold";
+}
+
+export function setReveal(mode: "hold" | "tap"): void {
+  try {
+    localStorage.setItem("holdem:reveal", mode);
+  } catch {
+    /* storage disabled — non-fatal */
+  }
+}
+
 /** A round icon button that flips light/dark; re-renders its own glyph. */
 export function themeToggle(cls = ""): HTMLElement {
   const btn = h("button", { class: cls, type: "button", title: "Toggle light / dark" });
