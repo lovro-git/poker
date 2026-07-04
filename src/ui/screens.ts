@@ -286,18 +286,22 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
 
   if (!legal) {
     // Not my turn / not in hand.
+    const mySeat = view.yourSeat >= 0 ? view.seats[view.yourSeat] : null;
+    const enough = view.seats.filter((s) => s && s.chips > 0 && !s.sitOutNext && !s.afk).length >= 2;
+
     let note = "Watching the table.";
-    if (view.stage === "showdown") note = "Next hand dealing…";
-    else if (view.stage === "waiting") note = "Waiting for the next hand…";
+    if (mySeat?.afk) note = "You're away — tap “I'm back” to rejoin.";
+    else if (view.stage === "showdown") note = "Next hand starting…";
+    else if (view.stage === "waiting") note = enough ? "Ready — waiting for the host to deal." : "Waiting for players to join…";
     else if (view.toActSeat >= 0) note = `Waiting for ${view.seats[view.toActSeat]?.name ?? "the table"}…`;
 
     const kids: Array<Node | false> = [h("div", { class: "wait-note" }, h("span", { class: "pulse-dot" }), note)];
-    if (view.isHost && view.stage === "waiting" && view.seats.filter((s) => s && s.chips > 0 && !s.sitOutNext).length >= 2) {
-      const b = h("button", { class: "btn btn-gold", type: "button", style: "max-width:220px" }, "Deal now");
+    if (view.isHost && view.stage === "waiting" && enough) {
+      const b = h("button", { class: "btn btn-gold deal-btn", type: "button" }, "Deal now");
       b.onclick = () => hs.start();
       kids.push(b);
     }
-    return h("div", { class: "controls" }, ...kids.filter(Boolean) as Node[]);
+    return h("div", { class: "controls controls--idle" }, ...kids.filter(Boolean) as Node[]);
   }
 
   const facing = legal.toCall > 0;
@@ -379,9 +383,11 @@ function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLEleme
     cardsEl = h("div", { class: "my-cards" }, ...seat.holeCards.map((c) => cardEl(c, { big: true, dim: folded, anim: animHole })));
   } else if (dealt) {
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, faceDown: true }), cardEl(null, { big: true, faceDown: true }));
+  } else if (seat) {
+    // Seated but not in this hand — show empty card outlines, not text.
+    cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, slot: true }), cardEl(null, { big: true, slot: true }));
   } else {
-    const label = view.yourSeat < 0 ? "Spectating" : seat?.afk ? "You're away" : "Waiting for next hand";
-    cardsEl = h("div", { class: "my-cards" }, h("span", { class: "placeholder" }, label));
+    cardsEl = h("div", { class: "my-cards" }, h("span", { class: "placeholder" }, "Spectating"));
   }
 
   const bar = h("div", { class: "my-bar" });

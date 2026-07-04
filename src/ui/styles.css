@@ -851,13 +851,27 @@ input:focus-visible {
   color: var(--text);
   border-color: var(--dim);
 }
+.controls--idle {
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  gap: 12px;
+}
 .wait-note {
   color: var(--muted);
   font-size: 14px;
-  padding: 16px 4px;
-  display: flex;
+  padding: 12px 20px;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.deal-btn {
+  max-width: 240px;
 }
 .pulse-dot {
   width: 8px;
@@ -1064,8 +1078,7 @@ input:focus-visible {
   }
   .wait-note {
     justify-content: center;
-    text-align: center;
-    padding: 12px 4px;
+    max-width: 100%;
   }
 }
 
