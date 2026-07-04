@@ -146,12 +146,12 @@ function settingsMenu(hs: TableHandlers): HTMLElement {
         return b;
       })),
     );
-  const panel = h("div", { class: "settings-panel" },
+  const panel = h("div", { class: `settings-panel${settingsOpen ? " open" : ""}` },
     seg("Reveal cards", [["hold", "Hold"], ["tap", "Tap"]], getReveal(), (v) => { setReveal(v as "hold" | "tap"); hs.rerender(); }),
     seg("Table view", [["table", "Table"], ["list", "List"]], getLayout(), (v) => { setLayout(v as "table" | "list"); hs.rerender(); }),
     seg("Theme", [["light", "Light"], ["dark", "Dark"]], getTheme(), (v) => { applyTheme(v as "light" | "dark"); hs.rerender(); }),
   );
-  gear.onclick = (e) => { e.stopPropagation(); panel.classList.toggle("open"); };
+  gear.onclick = (e) => { e.stopPropagation(); settingsOpen = !settingsOpen; panel.classList.toggle("open", settingsOpen); };
   return h("div", { class: "settings" }, gear, panel);
 }
 
@@ -166,6 +166,8 @@ export interface UIState {
 let revealHeld = false;
 let revealToggled = false;
 let releaseBound = false;
+// Settings popover open state also survives re-renders.
+let settingsOpen = false;
 function ensureReleaseListeners() {
   if (releaseBound) return;
   releaseBound = true;
@@ -256,12 +258,10 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   const cls = ["pod", "avatar-pod", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner", !seat.connected && "is-off"]
     .filter(Boolean).join(" ");
 
-  // Fan opponents' cards behind the avatar. On crowded tables (7-8) we drop the
-  // face-down backs; their cards still appear at showdown.
-  const crowded = view.config.maxSeats >= 7;
+  // Fan opponents' cards behind the avatar (face-down mid-hand, revealed at showdown).
   const faces = seat.holeCards && !seat.mucked;
   let cards: HTMLElement | null = null;
-  if (dealt && !isMe && (faces || !crowded)) {
+  if (dealt && !isMe) {
     const cardEls = faces
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
       : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];

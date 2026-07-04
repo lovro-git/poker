@@ -754,7 +754,7 @@ input:focus-visible {
 /* opponents' cards fan out behind the avatar */
 .avatar-pod .pod-cards {
   position: absolute;
-  bottom: calc(var(--av-size) * 0.46);
+  bottom: calc(var(--av-size) * 0.6);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -762,10 +762,10 @@ input:focus-visible {
   z-index: 0;
 }
 .avatar-pod .pod-cards .card:first-child {
-  transform: rotate(-10deg) translateX(24%);
+  transform: rotate(-12deg) translateX(30%);
 }
 .avatar-pod .pod-cards .card:last-child {
-  transform: rotate(10deg) translateX(-24%);
+  transform: rotate(12deg) translateX(-30%);
 }
 .pod-name {
   display: flex;
@@ -958,7 +958,7 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow-y: auto;
+  overflow: visible;
   padding-right: 2px;
 }
 .players-head {
@@ -1471,7 +1471,7 @@ input:focus-visible {
     flex-direction: column;
     gap: 10px;
     padding: 10px;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .players {
     width: 100%;
