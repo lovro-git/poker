@@ -221,9 +221,11 @@ function playerActionCell(view: ClientView, i: number, seat: PublicSeat): Node |
 /** Ellipse position for a seat (percent), clamped away from the edges/rail. */
 function seatCoords(relPos: number, total: number): { left: number; top: number } {
   const angle = Math.PI / 2 + (relPos / total) * Math.PI * 2;
-  const cx = 50, cy = 50, rx = 44, ry = 42;
-  const left = Math.max(13, Math.min(87, cx + rx * Math.cos(angle)));
-  const top = Math.max(13, Math.min(85, cy + ry * Math.sin(angle)));
+  // Push seats wider to the rail as the table fills up, so they spread out.
+  const many = total >= 7;
+  const cx = 50, cy = 50, rx = many ? 47 : 44, ry = many ? 45 : 42;
+  const left = Math.max(10, Math.min(90, cx + rx * Math.cos(angle)));
+  const top = Math.max(12, Math.min(86, cy + ry * Math.sin(angle)));
   return { left, top };
 }
 
@@ -240,11 +242,12 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   const cls = ["pod", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
     .filter(Boolean).join(" ");
 
-  // Opponents' cards sit inside the pod (in flow, so nothing overhangs and
-  // overlaps a neighbouring pod or the board). Your own cards live in the footer.
+  // Opponents' cards sit inside the pod. On crowded tables (7-8 seats) we drop the
+  // face-down backs to keep pods tiny — their cards still appear at showdown.
+  const crowded = view.config.maxSeats >= 7;
+  const faces = seat.holeCards && !seat.mucked;
   let cards: HTMLElement | null = null;
-  if (dealt && !isMe) {
-    const faces = seat.holeCards && !seat.mucked;
+  if (dealt && !isMe && (faces || !crowded)) {
     const cardEls = faces
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
       : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];

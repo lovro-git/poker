@@ -706,6 +706,8 @@ input:focus-visible {
   align-items: center;
   gap: 6px;
   text-align: left;
+  width: auto;
+  max-width: 100%;
 }
 .seat.is-left .pod-body,
 .seat.is-right .pod-body {
@@ -1393,10 +1395,10 @@ input:focus-visible {
     --card-board-w: clamp(46px, 12vw, 74px);
     --card-sm-w: clamp(21px, 5.2vw, 30px);
   }
-  /* crowded oval (7-8 seats): shrink the board so side pods have room */
+  /* crowded oval (7-8 seats): compact pods leave room for a decent board */
   .arena[data-seats="7"],
   .arena[data-seats="8"] {
-    --card-board-w: clamp(30px, 7.5vw, 46px);
+    --card-board-w: clamp(36px, 9vw, 56px);
   }
 
   .topbar {
