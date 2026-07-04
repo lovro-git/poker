@@ -1,4 +1,4 @@
-import { joinRoom, type Room } from "trystero";
+import mqtt, { type MqttClient } from "mqtt";
 import {
   applyAction,
   createGame,
@@ -15,7 +15,7 @@ import {
   startHand,
 } from "../engine/game";
 import type { GameState, PlayerAction, TableConfig } from "../engine/types";
-import { APP_ID, viewFor, type ClientView, type Command } from "./protocol";
+import { viewFor, type ClientView, type Command } from "./protocol";
 
 export interface Identity {
   playerId: string;
@@ -35,50 +35,49 @@ export interface Client {
   leave(): void;
 }
 
+// A public MQTT broker over secure WebSocket. Both host and guest must use the
+// same broker to meet — this relays all messages through the cloud, so it works
+// across any networks (mobile data included) with no accounts and no WebRTC/TURN.
+const BROKER = "wss://broker.emqx.io:8084/mqtt";
+const HEARTBEAT_MS = 3000;
+const PRESENCE_TIMEOUT_MS = 9000;
+
+const cmdTopic = (room: string) => `hxq/${room}/c`;
+const stateTopic = (room: string, playerId: string) => `hxq/${room}/s/${playerId}`;
 const stateKey = (roomKey: string) => `holdem:host:${roomKey}`;
 
-// Rendezvous config shared by host and guest — both must use the same relays to
-// find each other. A curated set of major, reliable nostr relays with redundancy.
-const RELAYS = [
-  "wss://relay.damus.io",
-  "wss://nos.lol",
-  "wss://relay.nostr.band",
-  "wss://relay.primal.net",
-  "wss://relay.snort.social",
-  "wss://nostr.mom",
-];
-const ROOM_CONFIG = {
-  appId: APP_ID,
-  relayUrls: RELAYS,
-  // Connect to ALL relays (not a random subset) so host and guest are guaranteed
-  // to share a rendezvous relay — one cause of "join never connects".
-  relayRedundancy: RELAYS.length,
-  // STUN for normal NATs; TURN so peers on different networks (e.g. mobile data,
-  // strict/symmetric NAT) can still connect by relaying media as a last resort.
-  rtcConfig: {
-    iceServers: [
-      { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
-      { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
-      { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
-      { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
-    ],
-  } as RTCConfiguration,
-};
+function connect(): MqttClient {
+  return mqtt.connect(BROKER, {
+    clean: true,
+    keepalive: 30,
+    reconnectPeriod: 2000,
+    connectTimeout: 10000,
+  });
+}
+
+function decode(payload: Uint8Array): unknown {
+  try {
+    return JSON.parse(new TextDecoder().decode(payload));
+  } catch {
+    return null;
+  }
+}
 
 // --- Host ------------------------------------------------------------------
 
 class HostClient implements Client {
   readonly isHost = true;
-  private room: Room;
+  private conn: MqttClient;
   private state: GameState;
-  private peerToPlayer = new Map<string, string>();
+  private known = new Set<string>(); // every player id we've published state to
   private connected = new Set<string>();
+  private lastSeen = new Map<string, number>();
   private pending: Identity[] = []; // spectators waiting for a seat
   private viewCb: ((v: ClientView) => void) | null = null;
   private progressScheduled = false;
   private deadlineSeat = -1;
-  private sendState: (v: ClientView, target: string) => void;
   private clock: ReturnType<typeof setInterval>;
+  private presence: ReturnType<typeof setInterval>;
 
   constructor(
     readonly roomKey: string,
@@ -90,27 +89,16 @@ class HostClient implements Client {
     if (!resume) seatPlayer(this.state, me.playerId, me.name, 0);
     this.connected.add(me.playerId);
 
-    this.room = joinRoom(ROOM_CONFIG, roomKey);
-    // Trystero's generic wants a JSON index-signature type; our structs are
-    // JSON-serializable at runtime, so we type at this boundary and use `any`.
-    const [sendState] = this.room.makeAction<any>("st");
-    const [, getCmd] = this.room.makeAction<any>("cmd");
-    this.sendState = (v, target) => void sendState(v, target);
-
-    getCmd((cmd: Command, peerId: string) => {
-      if (cmd.t === "join") this.peerToPlayer.set(peerId, cmd.playerId);
-      this.handle(cmd);
-    });
-    this.room.onPeerLeave((peerId) => {
-      const pid = this.peerToPlayer.get(peerId);
-      this.peerToPlayer.delete(peerId);
-      if (pid && ![...this.peerToPlayer.values()].includes(pid)) {
-        this.connected.delete(pid);
-        this.afterChange();
-      }
+    this.conn = connect();
+    this.conn.on("connect", () => this.conn.subscribe(cmdTopic(roomKey)));
+    this.conn.on("message", (topic, payload) => {
+      if (topic !== cmdTopic(roomKey)) return;
+      const cmd = decode(payload) as Command | null;
+      if (cmd) this.onCmd(cmd);
     });
 
     this.clock = setInterval(() => this.tickClock(), 300);
+    this.presence = setInterval(() => this.prunePresence(), 2500);
     this.afterChange();
   }
 
@@ -118,7 +106,6 @@ class HostClient implements Client {
     this.viewCb = cb;
     cb(viewFor(this.state, this.ctx(this.me.playerId, true)));
   }
-
   act(action: PlayerAction) {
     this.handle({ t: "action", playerId: this.me.playerId, action });
   }
@@ -136,11 +123,26 @@ class HostClient implements Client {
   }
   leave() {
     clearInterval(this.clock);
+    clearInterval(this.presence);
     localStorage.removeItem(stateKey(this.roomKey));
-    void this.room.leave();
+    void this.conn.end(true);
   }
 
-  // --- command handling ---
+  private onCmd(cmd: Command) {
+    if (cmd.t === "ping") {
+      this.lastSeen.set(cmd.playerId, Date.now());
+      if (!this.connected.has(cmd.playerId)) {
+        this.connected.add(cmd.playerId);
+        this.afterChange();
+      }
+      return;
+    }
+    if (cmd.t === "join") {
+      this.known.add(cmd.playerId);
+      this.lastSeen.set(cmd.playerId, Date.now());
+    }
+    this.handle(cmd);
+  }
 
   private handle(cmd: Command) {
     const s = this.state;
@@ -173,6 +175,8 @@ class HostClient implements Client {
         this.pending = this.pending.filter((p) => p.playerId !== cmd.playerId);
         if (!isHandInProgress(s)) removePlayer(s, cmd.playerId);
         break;
+      case "ping":
+        return;
     }
     this.afterChange();
   }
@@ -180,7 +184,6 @@ class HostClient implements Client {
   private nextHand() {
     this.progressScheduled = false;
     prepareNextHand(this.state);
-    // Seat any waiting spectators that now fit.
     this.pending = this.pending.filter((p) => seatPlayer(this.state, p.playerId, p.name) < 0);
     startHand(this.state);
     this.afterChange();
@@ -194,16 +197,27 @@ class HostClient implements Client {
       const la = legalActions(s, seatIdx);
       if (la) {
         applyAction(s, seatIdx, la.canCheck ? { type: "check" } : { type: "fold" });
-        // Timed out: mark AFK so they're skipped until they sit back in.
         setAfk(s, seatIdx);
         this.afterChange();
       }
     }
   }
 
+  private prunePresence() {
+    const cutoff = Date.now() - PRESENCE_TIMEOUT_MS;
+    let changed = false;
+    for (const pid of this.connected) {
+      if (pid === this.me.playerId) continue;
+      if ((this.lastSeen.get(pid) ?? 0) < cutoff) {
+        this.connected.delete(pid);
+        changed = true;
+      }
+    }
+    if (changed) this.afterChange();
+  }
+
   private afterChange() {
     const s = this.state;
-    // Shot clock: (re)arm whenever the acting seat changes.
     if (isHandInProgress(s) && s.toActSeat >= 0) {
       if (s.toActSeat !== this.deadlineSeat) {
         this.deadlineSeat = s.toActSeat;
@@ -216,8 +230,6 @@ class HostClient implements Client {
       s.actDeadline = null;
     }
 
-    // Auto-advance only *between* hands (after a showdown). The very first hand
-    // waits for the host to press "Deal" — see start().
     if (!this.progressScheduled && s.stage === "showdown") {
       this.progressScheduled = true;
       setTimeout(() => this.nextHand(), 5000);
@@ -250,8 +262,9 @@ class HostClient implements Client {
 
   private broadcast() {
     if (this.viewCb) this.viewCb(viewFor(this.state, this.ctx(this.me.playerId, true)));
-    for (const [peerId, pid] of this.peerToPlayer) {
-      this.sendState(viewFor(this.state, this.ctx(pid, false)), peerId);
+    if (!this.conn.connected) return;
+    for (const pid of this.known) {
+      this.conn.publish(stateTopic(this.roomKey, pid), JSON.stringify(viewFor(this.state, this.ctx(pid, false))));
     }
   }
 }
@@ -260,39 +273,42 @@ class HostClient implements Client {
 
 class GuestClient implements Client {
   readonly isHost = false;
-  private room: Room;
-  private sendCmd: (c: Command) => void;
+  private conn: MqttClient;
   private viewCb: ((v: ClientView) => void) | null = null;
   private lastView: ClientView | null = null;
   private gotView = false;
-  private joinTimer: ReturnType<typeof setInterval>;
+  private beat: ReturnType<typeof setInterval>;
 
   constructor(
     readonly roomKey: string,
     private me: Identity,
   ) {
-    this.room = joinRoom(ROOM_CONFIG, roomKey);
-    const [sendCmd] = this.room.makeAction<any>("cmd");
-    const [, getState] = this.room.makeAction<any>("st");
-    this.sendCmd = (c) => void sendCmd(c);
-
-    getState((view: ClientView) => {
+    this.conn = connect();
+    this.conn.on("connect", () => {
+      this.conn.subscribe(stateTopic(roomKey, me.playerId));
+      this.announce(); // (re)announce on connect and reconnect
+    });
+    this.conn.on("message", (topic, payload) => {
+      if (topic !== stateTopic(roomKey, me.playerId)) return;
+      const view = decode(payload) as ClientView | null;
+      if (!view) return;
       this.gotView = true;
       this.lastView = view;
       this.viewCb?.(view);
     });
 
-    // Announce ourselves when the host (or any peer) appears, and keep retrying
-    // until we receive our first view (covers host reconnect / late join).
-    this.room.onPeerJoin(() => this.announce());
-    this.joinTimer = setInterval(() => {
-      if (!this.gotView) this.announce();
-    }, 1500);
-    this.announce();
+    // Heartbeat: keep re-announcing until we're in, then just ping for presence.
+    this.beat = setInterval(() => {
+      if (this.gotView) this.pub({ t: "ping", playerId: this.me.playerId });
+      else this.announce();
+    }, HEARTBEAT_MS);
   }
 
+  private pub(cmd: Command) {
+    if (this.conn.connected) this.conn.publish(cmdTopic(this.roomKey), JSON.stringify(cmd));
+  }
   private announce() {
-    this.sendCmd({ t: "join", playerId: this.me.playerId, name: this.me.name });
+    this.pub({ t: "join", playerId: this.me.playerId, name: this.me.name });
   }
 
   onView(cb: (v: ClientView) => void) {
@@ -300,24 +316,24 @@ class GuestClient implements Client {
     if (this.lastView) cb(this.lastView);
   }
   act(action: PlayerAction) {
-    this.sendCmd({ t: "action", playerId: this.me.playerId, action });
+    this.pub({ t: "action", playerId: this.me.playerId, action });
   }
   rebuy() {
-    this.sendCmd({ t: "rebuy", playerId: this.me.playerId });
+    this.pub({ t: "rebuy", playerId: this.me.playerId });
   }
   sitOut(sitOut: boolean) {
-    this.sendCmd({ t: "sitOut", playerId: this.me.playerId, sitOut });
+    this.pub({ t: "sitOut", playerId: this.me.playerId, sitOut });
   }
   show(show: boolean) {
-    this.sendCmd({ t: "show", playerId: this.me.playerId, show });
+    this.pub({ t: "show", playerId: this.me.playerId, show });
   }
   start() {
     /* host-only */
   }
   leave() {
-    clearInterval(this.joinTimer);
-    this.sendCmd({ t: "leave", playerId: this.me.playerId });
-    void this.room.leave();
+    clearInterval(this.beat);
+    this.pub({ t: "leave", playerId: this.me.playerId });
+    void this.conn.end(true);
   }
 }
 

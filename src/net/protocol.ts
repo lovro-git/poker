@@ -16,6 +16,7 @@ export const APP_ID = "p2p-holdem-v1";
 
 export type Command =
   | { t: "join"; playerId: string; name: string }
+  | { t: "ping"; playerId: string } // presence heartbeat
   | { t: "action"; playerId: string; action: PlayerAction }
   | { t: "rebuy"; playerId: string }
   | { t: "sitOut"; playerId: string; sitOut: boolean }
