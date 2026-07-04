@@ -42,8 +42,8 @@
   --shadow-lg: 0 22px 55px rgba(20, 30, 50, 0.16);
 
   /* Cards scale with the viewport so the layout never restructures. */
-  --card-big-w: clamp(54px, 9vw, 108px); /* my hole cards (footer) */
-  --card-board-w: clamp(44px, 6vw, 84px); /* community cards on the felt */
+  --card-big-w: clamp(58px, 9.5vw, 116px); /* my hole cards (footer) */
+  --card-board-w: clamp(56px, 7vw, 100px); /* community cards — standardized, big */
   --card-sm-w: clamp(26px, 4vw, 40px); /* opponents' pod cards */
 
   --ff-display: "Space Grotesk", system-ui, sans-serif;
@@ -660,9 +660,37 @@ input:focus-visible {
   width: clamp(96px, 13vw, 148px);
   z-index: 2;
 }
+.seat.is-left,
+.seat.is-right {
+  width: clamp(118px, 15vw, 168px);
+}
+/* Crowded tables: smaller pods and cards so everything fits. */
+.arena[data-seats="7"],
+.arena[data-seats="8"] {
+  --card-sm-w: clamp(15px, 3.7vw, 22px);
+}
+.arena[data-seats="7"] .seat,
+.arena[data-seats="8"] .seat {
+  width: clamp(58px, 15vw, 80px);
+}
+.arena[data-seats="7"] .seat.is-left,
+.arena[data-seats="7"] .seat.is-right,
+.arena[data-seats="8"] .seat.is-left,
+.arena[data-seats="8"] .seat.is-right {
+  width: clamp(96px, 25vw, 132px);
+}
+.arena[data-seats="7"] .pod,
+.arena[data-seats="8"] .pod {
+  padding: 4px 6px;
+  gap: 2px;
+}
 .pod {
   position: relative;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
   background: rgba(8, 12, 11, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
@@ -670,6 +698,24 @@ input:focus-visible {
   color: var(--felt-ink);
   text-align: center;
   transition: 0.18s;
+}
+/* Side seats: horizontal pod (cards beside info) so they're shorter and edge-anchored. */
+.seat.is-left .pod,
+.seat.is-right .pod {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+}
+.seat.is-left .pod-body,
+.seat.is-right .pod-body {
+  align-items: flex-start;
+}
+.seat.is-left {
+  transform: translate(0, -50%); /* anchor pod's left edge to the point */
+}
+.seat.is-right {
+  transform: translate(-100%, -50%); /* anchor pod's right edge to the point */
 }
 .pod-empty {
   background: rgba(0, 0, 0, 0.14);
@@ -698,7 +744,7 @@ input:focus-visible {
   display: flex;
   gap: 3px;
   justify-content: center;
-  margin-bottom: 3px;
+  flex: none;
 }
 .pod-body {
   display: flex;
@@ -1343,9 +1389,14 @@ input:focus-visible {
 /* Phones: compact pods, my cards above full-width controls in the footer. */
 @media (max-width: 640px) {
   :root {
-    --card-big-w: clamp(64px, 17.5vw, 102px);
-    --card-board-w: clamp(34px, 8.2vw, 52px);
+    --card-big-w: clamp(66px, 18vw, 108px);
+    --card-board-w: clamp(46px, 12vw, 74px);
     --card-sm-w: clamp(21px, 5.2vw, 30px);
+  }
+  /* crowded oval (7-8 seats): shrink the board so side pods have room */
+  .arena[data-seats="7"],
+  .arena[data-seats="8"] {
+    --card-board-w: clamp(30px, 7.5vw, 46px);
   }
 
   .topbar {
@@ -1382,6 +1433,20 @@ input:focus-visible {
   }
   .seat {
     width: clamp(64px, 18.5vw, 88px);
+  }
+  .seat.is-left,
+  .seat.is-right {
+    width: clamp(102px, 29vw, 148px);
+  }
+  .arena[data-seats="7"] .seat,
+  .arena[data-seats="8"] .seat {
+    width: clamp(54px, 15vw, 74px);
+  }
+  .arena[data-seats="7"] .seat.is-left,
+  .arena[data-seats="7"] .seat.is-right,
+  .arena[data-seats="8"] .seat.is-left,
+  .arena[data-seats="8"] .seat.is-right {
+    width: clamp(90px, 25vw, 124px);
   }
 
   /* list layout on phones: 3-across grid, community on top */

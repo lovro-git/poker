@@ -201,15 +201,13 @@ function playerActionCell(view: ClientView, i: number, seat: PublicSeat): Node |
   return null;
 }
 
-/** Position a seat as a percentage around an ellipse; you sit at the bottom. */
-function seatStyle(relPos: number, total: number): string {
-  // Seats around an ellipse; clamp the extreme top/bottom so the top-centre pod
-  // clears the rail and the bottom (you) pod clears the footer edge.
+/** Ellipse position for a seat (percent), clamped away from the edges/rail. */
+function seatCoords(relPos: number, total: number): { left: number; top: number } {
   const angle = Math.PI / 2 + (relPos / total) * Math.PI * 2;
-  const cx = 50, cy = 50, rx = 42, ry = 42;
-  const left = cx + rx * Math.cos(angle);
+  const cx = 50, cy = 50, rx = 44, ry = 42;
+  const left = Math.max(13, Math.min(87, cx + rx * Math.cos(angle)));
   const top = Math.max(13, Math.min(85, cy + ry * Math.sin(angle)));
-  return `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%`;
+  return { left, top };
 }
 
 /** A seat pod on the felt. Your own hole cards live in the footer, not here. */
@@ -243,8 +241,8 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
 
   return h("div", { class: cls },
     badges.length ? h("div", { class: "pod-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
+    cards,
     h("div", { class: "pod-body" },
-      cards,
       h("div", { class: "pod-name" },
         !seat.connected && h("span", { class: "pod-off", title: "Disconnected" }, "●"),
         h("span", { class: "pod-nametxt" }, seat.name + (isMe ? " (you)" : "")),
@@ -552,12 +550,17 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   } else {
     // Green-felt oval: pot + board in the center, seats around the edge.
     const center = h("div", { class: "center" }, pot(), community(view, winSet, animFrom), stageLabel(), msg());
-    const arena = h("div", { class: "arena" }, h("div", { class: "felt" }), center);
     const total = view.config.maxSeats;
+    const arena = h("div", { class: "arena", "data-seats": String(total) }, h("div", { class: "felt" }), center);
     const anchor = view.yourSeat >= 0 ? view.yourSeat : 0;
     for (let i = 0; i < total; i++) {
       const relPos = (i - anchor + total) % total;
-      arena.append(h("div", { class: "seat", style: seatStyle(relPos, total) }, seatPod(view, i, winSet)));
+      const { left, top } = seatCoords(relPos, total);
+      // Left/right edge seats use a horizontal pod so they take less vertical room.
+      const side = left < 28 ? " is-left" : left > 72 ? " is-right" : "";
+      arena.append(
+        h("div", { class: `seat${side}`, style: `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%` }, seatPod(view, i, winSet)),
+      );
     }
     body = arena;
   }
