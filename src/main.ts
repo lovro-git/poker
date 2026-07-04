@@ -149,10 +149,8 @@ function showLobby(err: string) {
       startClient(createHost(key, { playerId: me.playerId, name }, config), key);
     },
     join: (name, key) => {
-      if (key === "TEST") {
-        // Local demo table filled with 7 bots (8 seats) — you host it yourself.
-        localStorage.setItem("holdem:hostkey", key);
-        startClient(createHost(key, { playerId: me.playerId, name }, defaultConfig({ maxSeats: 8 })), key);
+      if (isTestKey(key)) {
+        startTestRoom(name);
       } else {
         localStorage.removeItem("holdem:hostkey");
         startClient(createGuest(key, { playerId: me.playerId, name }), key);
@@ -161,11 +159,26 @@ function showLobby(err: string) {
   });
 }
 
+/** "TEST" (with or without the PKR- prefill) opens the local bot table. */
+function isTestKey(key: string): boolean {
+  return key.replace(/^PKR-/i, "").toUpperCase() === "TEST";
+}
+
+function startTestRoom(name: string) {
+  const me = getIdentity();
+  localStorage.setItem("holdem:hostkey", "TEST");
+  startClient(createHost("TEST", { playerId: me.playerId, name }, defaultConfig({ maxSeats: 8 })), "TEST");
+}
+
 function boot() {
   const me = getIdentity();
   const room = roomFromHash();
   if (!room) {
     showLobby("");
+    return;
+  }
+  if (isTestKey(room)) {
+    startTestRoom(me.name && me.name !== "Player" ? me.name : "You");
     return;
   }
   // Resume as host if this browser created this room; otherwise join as guest.
