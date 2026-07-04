@@ -1335,9 +1335,9 @@ input:focus-visible {
 /* Phones: compact pods, my cards above full-width controls in the footer. */
 @media (max-width: 640px) {
   :root {
-    --card-big-w: clamp(46px, 12.5vw, 74px);
-    --card-board-w: clamp(26px, 6.6vw, 40px);
-    --card-sm-w: clamp(16px, 4.2vw, 24px);
+    --card-big-w: clamp(58px, 15.5vw, 92px);
+    --card-board-w: clamp(30px, 7.2vw, 46px);
+    --card-sm-w: clamp(19px, 4.7vw, 27px);
   }
 
   .topbar {
@@ -1373,7 +1373,7 @@ input:focus-visible {
     height: 92%;
   }
   .seat {
-    width: clamp(56px, 16.5vw, 80px);
+    width: clamp(64px, 18.5vw, 88px);
   }
 
   /* list layout on phones: 3-across grid, community on top */
@@ -1436,8 +1436,8 @@ input:focus-visible {
     padding: 12px 6px;
   }
   .center {
-    width: 66%;
-    top: 39%;
+    width: 60%;
+    top: 44%;
   }
 
   .footer {

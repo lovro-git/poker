@@ -56,7 +56,8 @@ export function cardEl(card: Card | null, opts: CardOpts = {}): HTMLElement {
     { class: cls.trim() },
     h("div", { class: "card-corner" },
       h("span", { class: "card-rank" }, rankLabel(card)),
-      h("span", { class: "card-csuit" }, suitIcon(suit)),
+      // Suit in the corner only on small cards (which have no centre pip).
+      opts.small ? h("span", { class: "card-csuit" }, suitIcon(suit)) : null,
     ),
     !opts.small && h("div", { class: "card-pip" }, suitIcon(suit)),
   );

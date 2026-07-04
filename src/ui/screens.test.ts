@@ -46,7 +46,7 @@ describe("renderTable — oval table structure", () => {
     expect(mySeat).toBeTruthy();
     const style = mySeat!.getAttribute("style") ?? "";
     expect(style).toMatch(/left:50\.00%/);
-    expect(style).toMatch(/top:87\.00%/);
+    expect(style).toMatch(/top:85\.00%/);
   });
 
   it("does not render the local player's hole cards on the felt (they live in the footer)", () => {
