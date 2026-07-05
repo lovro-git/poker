@@ -454,28 +454,42 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
 
   // Compact bet slider — shown only after tapping Raise.
   if (raiseOpen && legal.canRaise) {
+    const step = Math.max(1, view.bigBlind || 1);
     const slider = h("input", {
-      class: "slider", type: "range", min: String(legal.minTo), max: String(legal.maxTo), value: String(ui.raiseTo), step: String(view.bigBlind || 1),
+      class: "slider", type: "range", min: String(legal.minTo), max: String(legal.maxTo), value: String(ui.raiseTo), step: "1",
+    }) as HTMLInputElement;
+    const amtEl = h("input", {
+      class: "raise-amt tnum", type: "number", inputmode: "numeric", value: String(ui.raiseTo), min: String(legal.minTo), max: String(legal.maxTo), step: String(step),
     }) as HTMLInputElement;
     const lbl = h("span", { class: "bet-amt tnum" }, "");
     const isAllIn = () => ui.raiseTo >= legal.maxTo;
     const label = () => (isAllIn() ? "All in" : `${facing ? "Raise" : "Bet"} ${chips(ui.raiseTo)}`);
-    const sync = (v: number) => {
-      ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, Math.round(v)));
+    const sync = (v: number, fromInput = false) => {
+      ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, Math.round(v || legal.minTo)));
       slider.value = String(ui.raiseTo);
+      if (!fromInput) amtEl.value = String(ui.raiseTo);
       slider.style.setProperty("--fill", `${((ui.raiseTo - legal.minTo) / Math.max(1, legal.maxTo - legal.minTo)) * 100}%`);
       lbl.textContent = label();
     };
     slider.oninput = () => sync(+slider.value);
+    amtEl.oninput = () => sync(+amtEl.value, true); // let you type freely
+    amtEl.onchange = () => sync(+amtEl.value); // snap/clamp on blur
     sync(ui.raiseTo);
 
     const cancel = h("button", { class: "act act-back", type: "button", title: "Back" }, icon("xmark"));
     cancel.onclick = () => { raiseOpen = false; hs.rerender(); };
+    const minus = h("button", { class: "bet-step", type: "button", title: "Less" }, icon("minus"));
+    minus.onclick = () => sync(ui.raiseTo - step);
+    const plus = h("button", { class: "bet-step", type: "button", title: "More" }, icon("plus"));
+    plus.onclick = () => sync(ui.raiseTo + step);
     const confirm = h("button", { class: "act act-raise", type: "button" }, icon("angles-up"), lbl);
     confirm.onclick = () => { raiseOpen = false; hs.act({ type: "raise", to: ui.raiseTo }); };
 
     return h("div", { class: "controls" },
-      h("div", { class: "bet-bar" }, cancel, h("div", { class: "bet-slider" }, slider), confirm),
+      h("div", { class: "bet-bar" },
+        h("div", { class: "bet-slider" }, slider),
+        h("div", { class: "bet-adjust" }, cancel, minus, amtEl, plus, confirm),
+      ),
     );
   }
 
@@ -565,9 +579,14 @@ function myButtons(view: ClientView, hs: TableHandlers): HTMLElement[] {
 function mine(view: ClientView, hs: TableHandlers, animHole: boolean): HTMLElement {
   const seat = view.yourSeat >= 0 ? view.seats[view.yourSeat] : null;
   const dealt = seat && (seat.status === "active" || seat.status === "allin" || seat.status === "folded");
+  // Once shown (real showdown, or you revealed an uncalled win), flip face-up.
+  const shown = !!seat?.holeCards && ((view.stage === "showdown" && !!view.result?.wentToShowdown) || !!seat.revealVoluntary);
 
   let cardsEl: HTMLElement;
-  if (seat?.holeCards) {
+  if (shown && seat?.holeCards) {
+    const winSet = winningCards(view);
+    cardsEl = h("div", { class: "my-cards" }, ...seat.holeCards.map((c) => cardEl(c, { big: true, dim: winSet.size > 0 && !winSet.has(c) })));
+  } else if (seat?.holeCards) {
     cardsEl = peekCards(seat.holeCards, seat.status === "folded", animHole, "my-cards");
   } else if (dealt) {
     cardsEl = h("div", { class: "my-cards" }, cardEl(null, { big: true, faceDown: true }), cardEl(null, { big: true, faceDown: true }));

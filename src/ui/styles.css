@@ -1353,27 +1353,53 @@ input:focus-visible {
 /* Compact bet bar (opens on Raise): [back] [slider + amount] [confirm] */
 .bet-bar {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
 }
 .bet-slider {
-  flex: 1 1 auto;
-  min-width: 0;
+  width: 100%;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 4px 8px;
 }
-.bet-bar .act-back {
+.bet-adjust {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bet-adjust .act-back {
   flex: 0 0 auto;
-  width: 46px;
-  padding: 12px 0;
+  width: 44px;
+  padding: 13px 0;
   background: var(--panel-2);
   color: var(--muted);
 }
-.bet-bar .act-raise {
+.bet-step {
   flex: 0 0 auto;
-  min-width: 132px;
+  width: 44px;
+  padding: 13px 0;
+  border-radius: var(--r-btn);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 15px;
+}
+.bet-step:hover {
+  filter: brightness(1.08);
+}
+.bet-step:active {
+  transform: translateY(1px);
+}
+.bet-adjust .raise-amt {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  padding: 12px 6px;
+  font-size: 16px;
+}
+.bet-adjust .act-raise {
+  flex: 1 1 auto;
+  min-width: 120px;
   gap: 8px;
 }
 .bet-amt {
