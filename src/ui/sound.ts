@@ -14,6 +14,7 @@ import chipLay1 from "../assets/sfx/chip-lay-1.ogg";
 import chipsStack2 from "../assets/sfx/chips-stack-2.ogg";
 import chipsStack4 from "../assets/sfx/chips-stack-4.ogg";
 import chipsCollide1 from "../assets/sfx/chips-collide-1.ogg";
+import knockUrl from "../assets/sfx/knock.ogg"; // real wood knock (public domain)
 
 export type Sfx = "deal" | "card" | "chip" | "check" | "fold" | "turn" | "win" | "reveal" | "allin" | "tick";
 // Sample-backed events (check = synth knock, turn/tick = synth cues).
@@ -72,7 +73,32 @@ export function setMuted(m: boolean): void {
   if (!m) {
     void ac().resume?.(); // unlock on the unmuting gesture
     for (const url of ALL_URLS) void load(url); // warm the cache
+    loadKnock();
   }
+}
+
+// The knock is a 6s public-domain clip of several raps; decode it once and find
+// the first onset so we can play a single clean rap for a "check".
+let knockBuf: AudioBuffer | null = null;
+let knockAt = 0;
+let knockLoading = false;
+function loadKnock(): void {
+  if (knockBuf || knockLoading) return;
+  knockLoading = true;
+  fetch(knockUrl)
+    .then((r) => r.arrayBuffer())
+    .then((b) => ac().decodeAudioData(b))
+    .then((buf) => {
+      const d = buf.getChannelData(0);
+      let i = 0;
+      while (i < d.length && Math.abs(d[i]) < 0.08) i++;
+      knockAt = Math.max(0, i / buf.sampleRate - 0.008);
+      knockBuf = buf;
+    })
+    .catch(() => {})
+    .finally(() => {
+      knockLoading = false;
+    });
 }
 
 export function toggleMuted(): boolean {
@@ -111,44 +137,20 @@ function chime(): void {
   }
 }
 
-/** A wooden double-knock — the classic "check" gesture on the table. */
+/** A real wooden knock — plays a single clean rap sliced from the clip. */
 function knock(): void {
+  if (!knockBuf) {
+    loadKnock(); // not decoded yet — ready for next time
+    return;
+  }
   const c = ac();
-  const now = c.currentTime;
-  const rap = (t: number) => {
-    // Low resonant "thock".
-    const o = c.createOscillator();
-    o.type = "sine";
-    o.frequency.setValueAtTime(185, t);
-    o.frequency.exponentialRampToValueAtTime(85, t + 0.06);
-    const g = c.createGain();
-    o.connect(g);
-    g.connect(c.destination);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.5, t + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
-    o.start(t);
-    o.stop(t + 0.11);
-    // Knuckle click transient.
-    const n = Math.floor(c.sampleRate * 0.02);
-    const buf = c.createBuffer(1, n, c.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
-    const src = c.createBufferSource();
-    src.buffer = buf;
-    const bp = c.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = 1700;
-    const ng = c.createGain();
-    ng.gain.value = 0.22;
-    src.connect(bp);
-    bp.connect(ng);
-    ng.connect(c.destination);
-    src.start(t);
-    src.stop(t + 0.03);
-  };
-  rap(now);
-  rap(now + 0.12);
+  const src = c.createBufferSource();
+  src.buffer = knockBuf;
+  const g = c.createGain();
+  g.gain.value = 0.9;
+  src.connect(g);
+  g.connect(c.destination);
+  src.start(c.currentTime, knockAt, 0.6); // one rap from the first onset
 }
 
 /** A soft high tick — shot-clock countdown warning. */

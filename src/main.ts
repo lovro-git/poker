@@ -56,8 +56,18 @@ function toast(text: string) {
   setTimeout(() => t.remove(), 2000);
 }
 
+let suppressActionSfx = false;
+
 const handlers: TableHandlers = {
-  act: (a) => client?.act(a),
+  act: (a) => {
+    // Play our own action immediately — the incoming view diff can't reliably
+    // attribute the change to us, so local feedback needs a direct cue.
+    if (a.type === "fold") playSfx("fold");
+    else if (a.type === "check") playSfx("check");
+    else playSfx("chip"); // call / raise
+    suppressActionSfx = true; // don't double up when our own view echoes back
+    client?.act(a);
+  },
   rebuy: () => client?.rebuy(),
   sitOut: (v) => client?.sitOut(v),
   show: (v) => client?.show(v),
@@ -131,14 +141,15 @@ function soundForView(prev: ClientView | null, v: ClientView) {
     playSfx("deal"); // new hand — shuffle/deal
   } else if (v.board.length > prev.board.length) {
     playSfx("card"); // flop/turn/river opening
-  } else {
-    // A single player's action: distinguish all-in / fold / bet / check.
+  } else if (!suppressActionSfx) {
+    // Another player's action: distinguish all-in / fold / bet / check.
     const changed = (st: string) => v.seats.some((s, i) => s && s.status === st && prev.seats[i]?.status !== st);
     if (changed("allin")) playSfx("allin");
     else if (changed("folded")) playSfx("fold");
     else if (v.pot > prev.pot) playSfx("chip"); // call / bet / raise
     else if (v.toActSeat !== prev.toActSeat && v.stage === prev.stage && v.stage !== "showdown") playSfx("check"); // knock
   }
+  suppressActionSfx = false; // only skips the immediate echo of our own action
 
   if (v.stage === "showdown" && prev.stage !== "showdown") {
     const iWon = v.yourSeat >= 0 && !!v.result?.pots.some((p) => p.winners.includes(v.yourSeat));
