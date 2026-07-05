@@ -637,10 +637,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
     for (let i = 0; i < total; i++) {
       const relPos = (i - anchor + total) % total;
       const { left, top } = seatCoords(relPos, total);
-      // Bet/tag sits below the plate for top & side seats, above it for the
-      // bottom row — always toward the pot, never beside the player.
-      const betDir = top < 55 ? 1 : -1;
-      const style = `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;--bet-dir:${betDir}`;
+      const style = `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%`;
       arena.append(h("div", { class: "seat", style }, seatPod(view, i, winSet, animHole)));
     }
     body = arena;

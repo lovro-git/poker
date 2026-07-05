@@ -256,10 +256,10 @@ input:focus-visible {
   height: 100%;
 }
 .card--sm .card-rank {
-  font-size: calc(var(--card-sm-w) * 0.52);
+  font-size: calc(var(--card-sm-w) * 0.56);
 }
 .card--sm .card-csuit {
-  font-size: calc(var(--card-sm-w) * 0.42);
+  font-size: calc(var(--card-sm-w) * 0.58);
 }
 
 @keyframes deal {
@@ -892,14 +892,14 @@ input:focus-visible {
   background: var(--gold);
   color: #2a1c05;
 }
-/* Bet chip / status tag — centered below the plate (above it for bottom-row
-   seats, via --bet-dir), toward the pot and never beside the player. */
+/* Bet chip / status tag — always centered just below the plate, clear of the
+   tucked cards, never beside the player. */
 .pod-bet,
 .pod-tag {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, calc(-50% + var(--bet-dir, 1) * (var(--av-size) * 0.55 + 22px)));
+  top: 100%;
+  transform: translate(-50%, 4px);
   white-space: nowrap;
   z-index: 5;
 }
@@ -1047,7 +1047,7 @@ input:focus-visible {
   gap: 6px;
   overflow: visible;
   padding-right: 2px;
-  --card-sm-w: clamp(21px, 4.6vw, 30px); /* showdown cards */
+  --card-sm-w: clamp(24px, 5vw, 33px); /* showdown cards */
 }
 .players-head {
   font-family: var(--ff-display);
@@ -1264,6 +1264,18 @@ input:focus-visible {
   display: flex;
   gap: 8px;
   flex: none;
+}
+/* Table idle footer (e.g. "You're away") — compact + centered. */
+.footer--table .my-actions {
+  justify-content: center;
+}
+.footer--table .wait-note {
+  padding: 8px 14px;
+  font-size: 12.5px;
+}
+.footer--table .controls--idle {
+  min-height: 0;
+  gap: 8px;
 }
 .mine {
   margin-left: auto; /* push my cards to the far bottom-right */
