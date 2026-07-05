@@ -5,6 +5,7 @@ import type { TableConfig } from "./engine/types";
 import { createGuest, createHost, resumeHost, type Client, type Identity } from "./net/room";
 import type { ClientView } from "./net/protocol";
 import { renderConnecting, renderLobby, renderTable, type TableHandlers, type UIState } from "./ui/screens";
+import { play as playSfx } from "./ui/sound";
 
 const root = document.getElementById("app")!;
 
@@ -114,12 +115,31 @@ function startClient(newClient: Client, roomKey: string) {
       ui.turnKey = turnKey;
       if (v.toActSeat === v.yourSeat) ui.raiseTo = 0;
     }
+    soundForView(view, v);
     view = v;
     renderTable(root, v, ui, handlers);
   });
 
   if (clockTimer) clearInterval(clockTimer);
   clockTimer = setInterval(tickClock, 250);
+}
+
+/** Fire a sound effect for whatever changed between two consecutive views. */
+function soundForView(prev: ClientView | null, v: ClientView) {
+  if (!prev) return;
+  if (v.handNumber !== prev.handNumber) playSfx("deal");
+  else if (v.board.length > prev.board.length) playSfx("card");
+  else if (v.pot > prev.pot) playSfx("chip");
+  else if (v.toActSeat !== prev.toActSeat && v.stage === prev.stage && v.stage !== "showdown") playSfx("check");
+
+  if (v.stage === "showdown" && prev.stage !== "showdown") {
+    const iWon = v.yourSeat >= 0 && !!v.result?.pots.some((p) => p.winners.includes(v.yourSeat));
+    playSfx(iWon ? "win" : "reveal");
+  }
+  // Your turn just started — a gentle alert regardless of what else changed.
+  if (v.stage !== "showdown" && v.toActSeat >= 0 && v.toActSeat === v.yourSeat && prev.toActSeat !== v.yourSeat) {
+    playSfx("turn");
+  }
 }
 
 function tickClock() {

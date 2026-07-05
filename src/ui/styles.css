@@ -124,6 +124,9 @@ input:focus-visible {
   color: var(--text);
   filter: brightness(1.08);
 }
+.icon-btn.is-muted {
+  color: var(--dim);
+}
 
 /* Settings popover */
 .settings {
@@ -995,7 +998,7 @@ input:focus-visible {
   gap: 6px;
   overflow: visible;
   padding-right: 2px;
-  --card-sm-w: clamp(17px, 3.6vw, 24px); /* showdown cards, kept compact */
+  --card-sm-w: clamp(21px, 4.6vw, 30px); /* showdown cards */
 }
 .players-head {
   font-family: var(--ff-display);
