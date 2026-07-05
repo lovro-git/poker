@@ -625,6 +625,9 @@ input:focus-visible {
   min-height: 0;
   position: relative;
   overflow: hidden;
+  /* A dark "card room" surround in both themes, so the green felt never clashes
+     with the light-mode parchment behind it. */
+  background: radial-gradient(100% 82% at 50% 34%, #2a2016 0%, #17110b 64%, #0f0b07 100%);
 }
 /* Absolutely sized + centered inside the arena so it can never overflow into
    the topbar or footer, regardless of flex quirks. */
@@ -992,7 +995,7 @@ input:focus-visible {
   gap: 6px;
   overflow: visible;
   padding-right: 2px;
-  --card-sm-w: clamp(15px, 3vw, 20px); /* showdown cards stay tiny */
+  --card-sm-w: clamp(17px, 3.6vw, 24px); /* showdown cards, kept compact */
 }
 .players-head {
   font-family: var(--ff-display);
@@ -1271,7 +1274,7 @@ input:focus-visible {
 .bet-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
 }
 .bet-slider {
@@ -1279,7 +1282,7 @@ input:focus-visible {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  padding: 0 12px;
 }
 .bet-bar .act-back {
   flex: 0 0 auto;
@@ -1290,11 +1293,11 @@ input:focus-visible {
 }
 .bet-bar .act-raise {
   flex: 0 0 auto;
-  min-width: 116px;
+  min-width: 132px;
+  gap: 8px;
 }
-.bet-slider .raise-amt {
-  flex: 0 0 auto;
-  width: 60px;
+.bet-amt {
+  font-feature-settings: "tnum" 1;
 }
 .raise-controls {
   display: flex;

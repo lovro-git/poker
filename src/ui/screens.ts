@@ -320,6 +320,7 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
   );
 
   // Only show cards face-up (at showdown); face-down backs add height for no info.
+  const showdown = view.stage === "showdown";
   const faces = seat.holeCards && !isMe && !seat.mucked;
   const cardsEl = faces
     ? h("div", { class: "pl-cards" }, ...seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) })))
@@ -331,10 +332,12 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
       h("div", { class: "pl-name" }, seat.name + (isMe ? " (you)" : "")),
       h("div", { class: "pl-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
     ),
+    // At showdown the revealed cards are what matters — drop the bet chip and the
+    // now-stale action pill so the hand reads cleanly.
     h("div", { class: "pl-right" },
       cardsEl,
-      seat.committedRound > 0 ? chipBadge(seat.committedRound) : null,
-      playerActionCell(view, i, seat),
+      !showdown && seat.committedRound > 0 ? chipBadge(seat.committedRound) : null,
+      showdown ? null : playerActionCell(view, i, seat),
     ),
   );
 }
@@ -429,24 +432,19 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
 
   // Compact bet slider — shown only after tapping Raise.
   if (raiseOpen && legal.canRaise) {
-    const amtEl = h("input", {
-      class: "raise-amt tnum", type: "number", value: String(ui.raiseTo), min: String(legal.minTo), max: String(legal.maxTo),
-    }) as HTMLInputElement;
     const slider = h("input", {
       class: "slider", type: "range", min: String(legal.minTo), max: String(legal.maxTo), value: String(ui.raiseTo), step: String(view.bigBlind || 1),
     }) as HTMLInputElement;
-    const lbl = h("span", {}, "");
+    const lbl = h("span", { class: "bet-amt tnum" }, "");
     const isAllIn = () => ui.raiseTo >= legal.maxTo;
     const label = () => (isAllIn() ? "All in" : `${facing ? "Raise" : "Bet"} ${chips(ui.raiseTo)}`);
     const sync = (v: number) => {
       ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, Math.round(v)));
       slider.value = String(ui.raiseTo);
-      amtEl.value = String(ui.raiseTo);
       slider.style.setProperty("--fill", `${((ui.raiseTo - legal.minTo) / Math.max(1, legal.maxTo - legal.minTo)) * 100}%`);
       lbl.textContent = label();
     };
     slider.oninput = () => sync(+slider.value);
-    amtEl.onchange = () => sync(+amtEl.value);
     sync(ui.raiseTo);
 
     const cancel = h("button", { class: "act act-back", type: "button", title: "Back" }, icon("xmark"));
@@ -455,7 +453,7 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
     confirm.onclick = () => { raiseOpen = false; hs.act({ type: "raise", to: ui.raiseTo }); };
 
     return h("div", { class: "controls" },
-      h("div", { class: "bet-bar" }, cancel, h("div", { class: "bet-slider" }, slider, amtEl), confirm),
+      h("div", { class: "bet-bar" }, cancel, h("div", { class: "bet-slider" }, slider), confirm),
     );
   }
 
