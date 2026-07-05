@@ -197,7 +197,7 @@ input:focus-visible {
 /* Only cards explicitly marked as newly dealt animate — ordinary re-renders
    (someone acts) must not replay this, or the whole board appears to flicker. */
 .card--deal {
-  animation: deal 0.26s ease both;
+  animation: deal 0.44s cubic-bezier(0.22, 0.68, 0.24, 1) both;
 }
 .card--sm {
   width: var(--card-sm-w);
@@ -277,7 +277,7 @@ input:focus-visible {
 @keyframes deal {
   from {
     opacity: 0;
-    transform: translateY(-6px) scale(0.94);
+    transform: translateY(-16px) scale(0.9) rotate(-2.5deg);
   }
 }
 

@@ -281,7 +281,7 @@ class HostClient implements Client {
 
     if (!this.progressScheduled && s.stage === "showdown") {
       this.progressScheduled = true;
-      setTimeout(() => this.nextHand(), 7000);
+      setTimeout(() => this.nextHand(), 12000);
     }
 
     // TEST room: auto-deal and drive the bots.
@@ -296,7 +296,7 @@ class HostClient implements Client {
         if (this.botSeat !== s.toActSeat) {
           this.botSeat = s.toActSeat;
           const idx = s.toActSeat;
-          setTimeout(() => { if (this.state.toActSeat === idx) this.botMove(idx); }, 600 + Math.floor(Math.random() * 700));
+          setTimeout(() => { if (this.state.toActSeat === idx) this.botMove(idx); }, 900 + Math.floor(Math.random() * 800));
         }
       } else {
         this.botSeat = -1;

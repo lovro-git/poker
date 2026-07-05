@@ -388,13 +388,20 @@ function centerMessage(view: ClientView): string {
 
 function community(view: ClientView, winSet: Set<Card>, animFrom: number): HTMLElement {
   const slots: HTMLElement[] = [];
+  let dealtIndex = 0; // stagger only the newly dealt cards, so they arrive one by one
   for (let k = 0; k < 5; k++) {
     const card = view.board[k];
-    slots.push(
-      card
-        ? cardEl(card, { big: true, dim: winSet.size > 0 && !winSet.has(card), anim: k >= animFrom })
-        : cardEl(null, { big: true, slot: true }),
-    );
+    if (!card) {
+      slots.push(cardEl(null, { big: true, slot: true }));
+      continue;
+    }
+    const anim = k >= animFrom;
+    const el = cardEl(card, { big: true, dim: winSet.size > 0 && !winSet.has(card), anim });
+    if (anim) {
+      el.style.animationDelay = `${dealtIndex * 0.13}s`;
+      dealtIndex++;
+    }
+    slots.push(el);
   }
   return h("div", { class: "community" }, ...slots);
 }
