@@ -150,6 +150,8 @@ function soundForView(prev: ClientView | null, v: ClientView) {
     else if (v.toActSeat !== prev.toActSeat && v.stage === prev.stage && v.stage !== "showdown") playSfx("check");
   }
   suppressActionSfx = false; // only skips the immediate echo of our own action
+  // Hand won — chips raked to the winner.
+  if (v.stage === "showdown" && prev.stage !== "showdown") playSfx("win");
   // Your turn just started.
   if (v.stage !== "showdown" && v.toActSeat >= 0 && v.toActSeat === v.yourSeat && prev.toActSeat !== v.yourSeat) {
     playSfx("turn");

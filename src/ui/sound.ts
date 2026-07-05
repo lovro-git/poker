@@ -11,16 +11,18 @@ import chipsStack2 from "../assets/sfx/chips-stack-2.ogg";
 import chipsStack4 from "../assets/sfx/chips-stack-4.ogg";
 import cardShove1 from "../assets/sfx/card-shove-1.ogg";
 import cardShove3 from "../assets/sfx/card-shove-3.ogg";
+import chipsCollide1 from "../assets/sfx/chips-collide-1.ogg";
 import knockUrl from "../assets/sfx/knock.ogg";
 
-export type Sfx = "deal" | "card" | "chip" | "check" | "fold" | "turn";
-type SampleSfx = "deal" | "card" | "chip" | "fold";
+export type Sfx = "deal" | "card" | "chip" | "check" | "fold" | "turn" | "win";
+type SampleSfx = "deal" | "card" | "chip" | "fold" | "win";
 
 const EVENTS: Record<SampleSfx, { urls: string[]; gain: number }> = {
   deal: { urls: [cardShuffle], gain: 0.55 }, // dealing a new hand
   card: { urls: [cardSlide1, cardSlide3, cardPlace2], gain: 0.8 }, // community cards
   chip: { urls: [chipsStack2, chipLay1, chipsStack4], gain: 0.9 }, // call / bet / raise
   fold: { urls: [cardShove1, cardShove3], gain: 0.75 }, // mucking
+  win: { urls: [chipsCollide1], gain: 1.0 }, // raking the pot
 };
 const ALL_URLS = [...new Set(Object.values(EVENTS).flatMap((e) => e.urls))];
 

@@ -266,8 +266,16 @@ class HostClient implements Client {
     const seat = s.seats[idx];
     const la = legalActions(s, idx);
     if (!seat || !la) return;
-    // TEMP (testing "Show cards"): bots always fold, so the human wins uncalled.
-    const action: PlayerAction = { type: "fold" };
+    const r = Math.random();
+    let action: PlayerAction;
+    if (la.canCheck) {
+      action = r < 0.85 ? { type: "check" } : { type: "raise", to: la.minRaiseTo };
+    } else {
+      const cheap = la.toCall <= Math.max(s.config.bigBlind * 3, seat.chips * 0.12);
+      if (r < 0.1 && la.canRaise) action = { type: "raise", to: la.minRaiseTo };
+      else if (cheap || r < 0.45) action = { type: "call" };
+      else action = { type: "fold" };
+    }
     applyAction(s, idx, action);
     this.afterChange();
   }
