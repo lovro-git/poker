@@ -811,12 +811,13 @@ input:focus-visible {
   gap: 2px;
   z-index: 1;
 }
-/* your own cards at your seat: bigger + peekable, on top so they stay tappable */
+/* your own cards at your seat: bigger + peekable, on top so they stay tappable.
+   Lifted fully above the plate so they never cover your avatar. */
 .avatar-pod .seat-cards {
   position: absolute;
   left: 50%;
   top: 0;
-  transform: translate(-50%, -64%);
+  transform: translate(-50%, -100%);
   z-index: 3;
   display: flex;
   gap: 3px;
@@ -825,9 +826,11 @@ input:focus-visible {
 .avatar-pod .seat-cards .peek-hint {
   display: none;
 }
-/* Winner: brighter, larger cards. Everyone else's cards dim at showdown. */
+/* Winner: brighter, larger cards — also fully above the plate (they sit on top
+   of it, so they must clear the avatar). Everyone else's cards dim at showdown. */
 .avatar-pod.is-winner .pod-cards {
   z-index: 7;
+  transform: translate(-50%, -100%);
   --card-sm-w: calc(var(--av-size) * 0.85);
 }
 .avatar-pod.is-loser .pod-cards {
