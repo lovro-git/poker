@@ -1,4 +1,5 @@
 import type { Card } from "../engine/cards";
+import { categoryName } from "../engine/evaluator";
 import type { Format, PlayerAction } from "../engine/types";
 import { cardEl, chipBadge, chipDisc, flipCard } from "./cards";
 import { applyTheme, chips, clear, getLayout, getReveal, getTheme, h, icon, setLayout, setReveal, themeToggle } from "./dom";
@@ -380,7 +381,10 @@ function resultMessage(view: ClientView): string {
   if (!top) return "";
   const total = Object.values(view.result.payouts).reduce((a, b) => a + b, 0);
   if (!view.result.wentToShowdown) return `${names(top.winners)} wins ${total.toLocaleString()}`;
-  return `${names(top.winners)} wins ${total.toLocaleString()} chips`;
+  // Name the winning hand (e.g. "— Flush") at a real showdown.
+  const score = view.result.showdown[top.winners[0]]?.score;
+  const hand = score ? ` — ${categoryName(score)}` : "";
+  return `${names(top.winners)} wins ${total.toLocaleString()} chips${hand}`;
 }
 
 function centerMessage(view: ClientView): string {
