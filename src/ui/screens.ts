@@ -168,6 +168,8 @@ let revealToggled = false;
 let releaseBound = false;
 // Settings popover open state also survives re-renders.
 let settingsOpen = false;
+// Whether the compact bet slider is open (after tapping Raise).
+let raiseOpen = false;
 function ensureReleaseListeners() {
   if (releaseBound) return;
   releaseBound = true;
@@ -399,6 +401,7 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
   const legal = myTurn ? computeLegal(view) : null;
 
   if (!legal) {
+    raiseOpen = false;
     // Not my turn / not in hand.
     const mySeat = view.yourSeat >= 0 ? view.seats[view.yourSeat] : null;
     const enough = view.seats.filter((s) => s && s.chips > 0 && !s.sitOutNext && !s.afk).length >= 2;
@@ -421,6 +424,38 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
   const facing = legal.toCall > 0;
   ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, ui.raiseTo || legal.minTo));
 
+  // Compact bet slider — shown only after tapping Raise.
+  if (raiseOpen && legal.canRaise) {
+    const amtEl = h("input", {
+      class: "raise-amt tnum", type: "number", value: String(ui.raiseTo), min: String(legal.minTo), max: String(legal.maxTo),
+    }) as HTMLInputElement;
+    const slider = h("input", {
+      class: "slider", type: "range", min: String(legal.minTo), max: String(legal.maxTo), value: String(ui.raiseTo), step: String(view.bigBlind || 1),
+    }) as HTMLInputElement;
+    const lbl = h("span", {}, "");
+    const isAllIn = () => ui.raiseTo >= legal.maxTo;
+    const label = () => (isAllIn() ? "All in" : `${facing ? "Raise" : "Bet"} ${chips(ui.raiseTo)}`);
+    const sync = (v: number) => {
+      ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, Math.round(v)));
+      slider.value = String(ui.raiseTo);
+      amtEl.value = String(ui.raiseTo);
+      slider.style.setProperty("--fill", `${((ui.raiseTo - legal.minTo) / Math.max(1, legal.maxTo - legal.minTo)) * 100}%`);
+      lbl.textContent = label();
+    };
+    slider.oninput = () => sync(+slider.value);
+    amtEl.onchange = () => sync(+amtEl.value);
+    sync(ui.raiseTo);
+
+    const cancel = h("button", { class: "act act-back", type: "button", title: "Back" }, icon("xmark"));
+    cancel.onclick = () => { raiseOpen = false; hs.rerender(); };
+    const confirm = h("button", { class: "act act-raise", type: "button" }, icon("angles-up"), lbl);
+    confirm.onclick = () => { raiseOpen = false; hs.act({ type: "raise", to: ui.raiseTo }); };
+
+    return h("div", { class: "controls" },
+      h("div", { class: "bet-bar" }, cancel, h("div", { class: "bet-slider" }, slider, amtEl), confirm),
+    );
+  }
+
   const foldBtn = h("button", { class: "act act-fold", type: "button" }, icon("xmark"), h("span", {}, "Fold"));
   foldBtn.onclick = () => hs.act({ type: "fold" });
 
@@ -431,52 +466,21 @@ function controls(view: ClientView, ui: UIState, hs: TableHandlers): HTMLElement
 
   const row = h("div", { class: "action-row" }, foldBtn, midBtn);
 
-  let raiseControls: HTMLElement | null = null;
   if (legal.canRaise) {
-    const raiseLbl = h("span", {}, "");
-    const raiseBtn = h("button", { class: "act act-raise", type: "button" }, icon("angles-up"), raiseLbl);
-    raiseBtn.onclick = () => hs.act({ type: "raise", to: ui.raiseTo });
+    const raiseBtn = h("button", { class: "act act-raise", type: "button" }, icon("angles-up"), h("span", {}, "Raise"));
+    raiseBtn.onclick = () => {
+      // Open the slider, pre-set to a half-pot raise.
+      const potAfter = view.pot + legal.toCall;
+      ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, view.currentBet + Math.round(potAfter / 2)));
+      raiseOpen = true;
+      hs.rerender();
+    };
     row.append(raiseBtn);
-
-    const amtEl = h("input", {
-      class: "raise-amt tnum", type: "number", value: String(ui.raiseTo), min: String(legal.minTo), max: String(legal.maxTo),
-    }) as HTMLInputElement;
-    const slider = h("input", {
-      class: "slider", type: "range", min: String(legal.minTo), max: String(legal.maxTo), value: String(ui.raiseTo), step: String(view.bigBlind || 1),
-    }) as HTMLInputElement;
-    const isAllIn = () => ui.raiseTo >= legal.maxTo;
-    const label = () => (isAllIn() ? "All in" : `${facing ? "Raise" : "Bet"} ${chips(ui.raiseTo)}`);
-    const sync = (v: number) => {
-      ui.raiseTo = Math.min(legal.maxTo, Math.max(legal.minTo, Math.round(v)));
-      slider.value = String(ui.raiseTo);
-      amtEl.value = String(ui.raiseTo);
-      slider.style.setProperty("--fill", `${((ui.raiseTo - legal.minTo) / Math.max(1, legal.maxTo - legal.minTo)) * 100}%`);
-      raiseLbl.textContent = label();
-    };
-    slider.oninput = () => sync(+slider.value);
-    amtEl.onchange = () => sync(+amtEl.value);
-
-    const potAfter = view.pot + legal.toCall;
-    const preset = (lbl: string, to: number) => {
-      const b = h("button", { class: "chip-btn", type: "button" }, lbl);
-      b.onclick = () => sync(to);
-      return b;
-    };
-    raiseControls = h("div", { class: "raise-controls" },
-      h("div", { class: "presets" },
-        preset("Min", legal.minTo),
-        preset("½ Pot", view.currentBet + Math.round(potAfter / 2)),
-        preset("Pot", view.currentBet + potAfter),
-        preset("Max", legal.maxTo),
-      ),
-      h("div", { class: "raise-row" }, slider, amtEl),
-    );
-    sync(ui.raiseTo);
   } else {
     row.append(h("button", { class: "act act-raise", type: "button", disabled: true }, icon("angles-up"), h("span", {}, "Raise")));
   }
 
-  return h("div", { class: "controls" }, row, raiseControls);
+  return h("div", { class: "controls" }, row);
 }
 
 // --- My cards (peekable) + secondary buttons -------------------------------
@@ -571,10 +575,11 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   const animHole = !sameHand;
   ui.prevBoardLen = view.board.length;
   ui.prevHand = view.handNumber;
-  // New hand -> cards hidden again by default.
+  // New hand -> cards hidden again by default, bet slider closed.
   if (!sameHand) {
     revealHeld = false;
     revealToggled = false;
+    raiseOpen = false;
   }
 
   const pot = () => h("div", { class: "pot" }, chipDisc(view.pot), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString()));

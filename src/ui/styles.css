@@ -44,7 +44,7 @@
   /* Cards scale with the viewport so the layout never restructures. */
   --card-big-w: clamp(58px, 9.5vw, 116px); /* my hole cards (footer) */
   --card-board-w: clamp(56px, 7vw, 100px); /* community cards — standardized, big */
-  --card-sm-w: clamp(24px, 3.4vw, 36px); /* opponents' fanned pod cards */
+  --card-sm-w: clamp(30px, 4.6vw, 46px); /* opponents' fanned pod cards */
   --av-size: clamp(48px, 6vw, 78px); /* seat avatar disc */
 
   --ff-display: "Space Grotesk", system-ui, sans-serif;
@@ -664,7 +664,7 @@ input:focus-visible {
 .arena[data-seats="7"],
 .arena[data-seats="8"] {
   --av-size: clamp(38px, 5vw, 58px);
-  --card-sm-w: clamp(18px, 2.6vw, 28px);
+  --card-sm-w: clamp(24px, 3.6vw, 38px);
 }
 /* --- Avatar-disc seat pod --- */
 .avatar-pod {
@@ -757,7 +757,7 @@ input:focus-visible {
   position: absolute;
   top: 0;
   left: 50%;
-  transform: translate(-50%, -62%);
+  transform: translate(-50%, -72%);
   display: flex;
   gap: 0;
   z-index: 0;
@@ -826,7 +826,7 @@ input:focus-visible {
   position: absolute;
   left: 50%;
   top: calc(var(--av-size) / 2);
-  --bet-r: calc(var(--av-size) * 0.7 + 15px);
+  --bet-r: calc(var(--av-size) * 0.95 + 18px);
   transform: translate(
     calc(-50% + var(--ux, 0) * var(--bet-r)),
     calc(-50% + var(--uy, 0) * var(--bet-r))
@@ -973,12 +973,13 @@ input:focus-visible {
   text-shadow: none;
 }
 .players {
-  width: clamp(160px, 26vw, 290px);
+  width: clamp(150px, 24vw, 260px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 5px;
   overflow: visible;
   padding-right: 2px;
+  --card-sm-w: clamp(17px, 3.4vw, 22px); /* list cards stay tiny */
 }
 .players-head {
   font-family: var(--ff-display);
@@ -991,11 +992,11 @@ input:focus-visible {
 .pl-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 10px 12px;
+  border-radius: 10px;
+  padding: 5px 8px;
   box-shadow: var(--shadow);
   transition: 0.18s;
 }
@@ -1020,12 +1021,12 @@ input:focus-visible {
   box-shadow: 0 0 0 1px var(--go), 0 0 20px rgba(31, 157, 105, 0.28);
 }
 .pl-pos {
-  width: 26px;
+  width: 20px;
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 .pl-cards {
   display: flex;
@@ -1039,7 +1040,7 @@ input:focus-visible {
 .pl-name {
   font-family: var(--ff-display);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1054,8 +1055,8 @@ input:focus-visible {
 .pl-chips {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 13px;
+  gap: 4px;
+  font-size: 11.5px;
   color: var(--chip-ink);
   font-family: var(--ff-display);
 }
@@ -1133,6 +1134,8 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  padding-top: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
 }
 .footer--table .controls {
   margin: 0 auto;
@@ -1198,6 +1201,35 @@ input:focus-visible {
 .act-raise {
   background: var(--gold);
   color: #2a1c05;
+}
+/* Compact bet bar (opens on Raise): [back] [slider + amount] [confirm] */
+.bet-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.bet-slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bet-bar .act-back {
+  flex: 0 0 auto;
+  width: 46px;
+  padding: 12px 0;
+  background: var(--panel-2);
+  color: var(--muted);
+}
+.bet-bar .act-raise {
+  flex: 0 0 auto;
+  min-width: 116px;
+}
+.bet-slider .raise-amt {
+  flex: 0 0 auto;
+  width: 60px;
 }
 .raise-controls {
   display: flex;
@@ -1268,7 +1300,7 @@ input:focus-visible {
 .controls--idle {
   align-items: center;
   justify-content: center;
-  min-height: 88px;
+  min-height: 52px;
   gap: 12px;
 }
 .wait-note {
