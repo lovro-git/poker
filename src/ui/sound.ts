@@ -2,7 +2,6 @@
 // wood knock, played via the Web Audio API. No network at runtime; the audio
 // context unlocks on the first user gesture. A mute toggle persists in storage.
 
-import cardShuffle from "../assets/sfx/card-shuffle.ogg";
 import cardSlide1 from "../assets/sfx/card-slide-1.ogg";
 import cardSlide3 from "../assets/sfx/card-slide-3.ogg";
 import cardPlace2 from "../assets/sfx/card-place-2.ogg";
@@ -14,11 +13,10 @@ import cardShove3 from "../assets/sfx/card-shove-3.ogg";
 import chipsCollide1 from "../assets/sfx/chips-collide-1.ogg";
 import knockUrl from "../assets/sfx/knock.ogg";
 
-export type Sfx = "deal" | "card" | "chip" | "check" | "fold" | "turn" | "win";
-type SampleSfx = "deal" | "card" | "chip" | "fold" | "win";
+export type Sfx = "card" | "chip" | "check" | "fold" | "turn" | "win";
+type SampleSfx = "card" | "chip" | "fold" | "win";
 
 const EVENTS: Record<SampleSfx, { urls: string[]; gain: number }> = {
-  deal: { urls: [cardShuffle], gain: 0.55 }, // dealing a new hand
   card: { urls: [cardSlide1, cardSlide3, cardPlace2], gain: 0.8 }, // community cards
   chip: { urls: [chipsStack2, chipLay1, chipsStack4], gain: 0.9 }, // call / bet / raise
   fold: { urls: [cardShove1, cardShove3], gain: 0.75 }, // mucking

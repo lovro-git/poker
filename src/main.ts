@@ -139,9 +139,9 @@ function startClient(newClient: Client, roomKey: string) {
 function soundForView(prev: ClientView | null, v: ClientView) {
   if (!prev) return;
   if (v.handNumber !== prev.handNumber) {
-    playSfx("deal"); // new hand dealt
+    // new hand — no shuffle/deal sound (only community cards get a sound)
   } else if (v.board.length > prev.board.length) {
-    playSfx("card"); // flop/turn/river dealt
+    playSfx("card"); // flop/turn/river placed
   } else if (!suppressActionSfx) {
     // Another player's action.
     const folded = v.seats.some((s, i) => s && s.status === "folded" && prev.seats[i]?.status !== "folded");
