@@ -308,12 +308,16 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>, animHole: boole
     badge ? h("span", { class: `pod-btn ${badge}` }, badge.toUpperCase()) : null,
   );
 
-  return h("div", { class: cls },
-    cards,
-    plate,
-    podTag(view, i, seat),
-    seat.committedRound > 0 ? h("div", { class: "pod-bet" }, chipBadge(seat.committedRound)) : null,
-  );
+  // One element below (or, for bottom seats, above) the plate: the committed bet
+  // stands in for Call/Raise; otherwise a status tag. Nothing shows at showdown.
+  let below: HTMLElement | null = null;
+  if (!showdown) {
+    below = seat.committedRound > 0
+      ? h("div", { class: "pod-bet" }, chipBadge(seat.committedRound))
+      : podTag(view, i, seat);
+  }
+
+  return h("div", { class: cls }, cards, plate, below);
 }
 
 /** A compact player row for the list layout: small avatar disc · name/chips ·
@@ -633,11 +637,10 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
     for (let i = 0; i < total; i++) {
       const relPos = (i - anchor + total) % total;
       const { left, top } = seatCoords(relPos, total);
-      // Unit vector toward the table centre, so bet chips sit in front of the
-      // player (toward the pot) instead of below the pod.
-      const dx = 50 - left, dy = 44 - top;
-      const len = Math.hypot(dx, dy) || 1;
-      const style = `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;--ux:${(dx / len).toFixed(3)};--uy:${(dy / len).toFixed(3)}`;
+      // Bet/tag sits below the plate for top & side seats, above it for the
+      // bottom row — always toward the pot, never beside the player.
+      const betDir = top < 55 ? 1 : -1;
+      const style = `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;--bet-dir:${betDir}`;
       arena.append(h("div", { class: "seat", style }, seatPod(view, i, winSet, animHole)));
     }
     body = arena;
