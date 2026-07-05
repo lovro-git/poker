@@ -2,3 +2,11 @@
 node_modules/
 .env
 dist/
+
+# Agent tooling (kept locally, out of the app repo)
+.agents/
+.claude/
+docs/
+skills-lock.json
+CLAUDE.md
+CONTEXT.md
