@@ -89,6 +89,7 @@ class HostClient implements Client {
   private presence: ReturnType<typeof setInterval>;
   private mockIds = new Set<string>(); // bot players (TEST room)
   private botSeat = -1;
+  private stopped = false; // set on leave, so pending timers can't revive us
 
   constructor(
     readonly roomKey: string,
@@ -144,6 +145,8 @@ class HostClient implements Client {
     if (!isHandInProgress(this.state)) this.nextHand();
   }
   leave() {
+    this.stopped = true;
+    this.viewCb = null; // any pending timer that still fires can't re-render us
     clearInterval(this.clock);
     clearInterval(this.presence);
     localStorage.removeItem(stateKey(this.roomKey));
@@ -151,6 +154,7 @@ class HostClient implements Client {
   }
 
   private onCmd(cmd: Command) {
+    if (this.stopped) return;
     if (cmd.t === "ping") {
       this.lastSeen.set(cmd.playerId, Date.now());
       if (!this.connected.has(cmd.playerId)) {
@@ -204,6 +208,7 @@ class HostClient implements Client {
   }
 
   private nextHand() {
+    if (this.stopped) return;
     this.progressScheduled = false;
     prepareNextHand(this.state);
     this.pending = this.pending.filter((p) => seatPlayer(this.state, p.playerId, p.name) < 0);
@@ -212,6 +217,7 @@ class HostClient implements Client {
   }
 
   private tickClock() {
+    if (this.stopped) return;
     const s = this.state;
     if (!isHandInProgress(s) || s.toActSeat < 0 || s.actDeadline == null) return;
     if (Date.now() >= s.actDeadline) {
@@ -255,6 +261,7 @@ class HostClient implements Client {
   }
 
   private botMove(idx: number) {
+    if (this.stopped) return;
     const s = this.state;
     const seat = s.seats[idx];
     const la = legalActions(s, idx);
@@ -266,6 +273,7 @@ class HostClient implements Client {
   }
 
   private afterChange() {
+    if (this.stopped) return;
     const s = this.state;
     if (isHandInProgress(s) && s.toActSeat >= 0) {
       if (s.toActSeat !== this.deadlineSeat) {
@@ -403,6 +411,7 @@ class GuestClient implements Client {
     /* host-only */
   }
   leave() {
+    this.viewCb = null; // a late message can't re-render us back into the room
     clearInterval(this.beat);
     this.pub({ t: "leave", playerId: this.me.playerId });
     void this.conn.end(true);

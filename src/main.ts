@@ -79,6 +79,8 @@ const handlers: TableHandlers = {
   leave: () => {
     if (connectTimer) clearTimeout(connectTimer);
     connectTimer = null;
+    if (clockTimer) clearInterval(clockTimer);
+    clockTimer = null;
     client?.leave();
     client = null;
     view = null;
