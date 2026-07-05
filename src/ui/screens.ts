@@ -326,19 +326,26 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
     ? h("div", { class: "pl-cards" }, ...seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) })))
     : null;
 
+  // A single right-side token so nothing overlaps and names keep their room.
+  // Blinds already show as the avatar corner chip, so we don't repeat them here;
+  // the committed bet stands in for Call/Raise, and only special states get a pill.
+  let right: Node | null = null;
+  if (showdown) right = cardsEl;
+  else if (acting) right = h("div", { class: "pl-clock" }, "⏱ ", h("span", { class: "clock-num" }, "—"));
+  else if (seat.afk) right = h("span", { class: "pill pill-afk" }, "AFK");
+  else if (seat.status === "allin") right = h("span", { class: "pill pill-allin" }, "All-in");
+  else if (seat.committedRound > 0) right = chipBadge(seat.committedRound);
+  else if (seat.waitingToPlay) right = h("span", { class: "pill pill-wait" }, "Next");
+  else if (seat.chips <= 0) right = h("span", { class: "pill pill-wait" }, view.config.format === "cash" ? "Busted" : "Out");
+  else if (seat.status === "sittingOut") right = h("span", { class: "pill pill-wait" }, "Away");
+
   return h("div", { class: cls },
     ava,
     h("div", { class: "pl-info" },
       h("div", { class: "pl-name" }, seat.name + (isMe ? " (you)" : "")),
       h("div", { class: "pl-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
     ),
-    // At showdown the revealed cards are what matters — drop the bet chip and the
-    // now-stale action pill so the hand reads cleanly.
-    h("div", { class: "pl-right" },
-      cardsEl,
-      !showdown && seat.committedRound > 0 ? chipBadge(seat.committedRound) : null,
-      showdown ? null : playerActionCell(view, i, seat),
-    ),
+    right ? h("div", { class: "pl-right" }, right) : null,
   );
 }
 
