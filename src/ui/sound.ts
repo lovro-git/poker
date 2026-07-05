@@ -17,7 +17,7 @@ export type Sfx = "card" | "chip" | "check" | "fold" | "turn" | "win";
 type SampleSfx = "card" | "chip" | "fold" | "win";
 
 const EVENTS: Record<SampleSfx, { urls: string[]; gain: number }> = {
-  card: { urls: [cardSlide1, cardSlide3, cardPlace2], gain: 0.8 }, // community cards
+  card: { urls: [cardSlide1, cardSlide3, cardPlace2], gain: 1.15 }, // community cards
   chip: { urls: [chipsStack2, chipLay1, chipsStack4], gain: 0.9 }, // call / bet / raise
   fold: { urls: [cardShove1, cardShove3], gain: 0.75 }, // mucking
   win: { urls: [chipsCollide1], gain: 1.0 }, // raking the pot
@@ -145,12 +145,33 @@ function chime(): void {
   }
 }
 
+/** A bright rising arpeggio for the round winner (layered over the chip rake). */
+function winChime(): void {
+  const c = ac();
+  const now = c.currentTime;
+  [523, 659, 784, 1047].forEach((f, i) => {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = "triangle";
+    o.frequency.value = f;
+    o.connect(g);
+    g.connect(c.destination);
+    const t = now + i * 0.085;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.17, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+    o.start(t);
+    o.stop(t + 0.38);
+  });
+}
+
 export function play(name: Sfx): void {
   if (muted) return;
   try {
     void ac().resume?.();
     if (name === "turn") return chime();
     if (name === "check") return knock();
+    if (name === "win") winChime(); // plus the chip-rake sample below
     const ev = EVENTS[name as SampleSfx];
     if (!ev) return;
     const url = ev.urls[Math.floor(Math.random() * ev.urls.length)];
