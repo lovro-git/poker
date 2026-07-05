@@ -55,19 +55,27 @@ function load(url: string): Promise<AudioBuffer | null> {
   return p;
 }
 
-// Warm the cache + unlock the audio context on the first user gesture anywhere,
-// so the first action already has sound (autoplay policy needs a gesture).
-let unlocked = false;
+// Browsers suspend the audio context until a user gesture, and again whenever
+// the tab is backgrounded. So resume it on EVERY gesture and whenever the tab
+// becomes visible — and warm the sample cache once on the first gesture.
+let warmed = false;
+function resumeCtx(): void {
+  const c = ac();
+  if (c.state !== "running") void c.resume?.();
+}
 function unlock(): void {
-  if (unlocked) return;
-  unlocked = true;
-  void ac().resume?.();
+  resumeCtx();
+  if (warmed) return;
+  warmed = true;
   for (const url of ALL_URLS) void load(url);
   loadKnock();
 }
-for (const ev of ["pointerdown", "keydown", "touchstart"]) {
-  window.addEventListener(ev, unlock, { once: false, passive: true });
+for (const ev of ["pointerdown", "keydown", "touchstart", "click"]) {
+  window.addEventListener(ev, unlock, { passive: true });
 }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") resumeCtx();
+});
 
 export function isMuted(): boolean {
   return muted;
