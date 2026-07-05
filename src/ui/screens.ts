@@ -536,7 +536,8 @@ function myButtons(view: ClientView, hs: TableHandlers): HTMLElement[] {
     buttons.push(back);
   }
   if (view.stage === "showdown" && (seat.status === "active" || seat.status === "allin")) {
-    if (!view.result?.wentToShowdown && view.result?.pots.some((p) => p.winners.includes(view.yourSeat)) && !seat.revealVoluntary && !seat.holeCards) {
+    // Uncalled win (everyone folded): let the winner optionally reveal their hand.
+    if (!view.result?.wentToShowdown && view.result?.pots.some((p) => p.winners.includes(view.yourSeat)) && !seat.revealVoluntary) {
       const b = h("button", { class: "mini-btn", type: "button" }, "Show cards");
       b.onclick = () => hs.show(true);
       buttons.push(b);
