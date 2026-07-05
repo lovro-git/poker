@@ -1,9 +1,39 @@
-// Tiny synthesized sound effects via the Web Audio API — no asset files, so it
-// works on the static GitHub Pages deploy with no network requests. Muted by
-// default; the first unmute happens on a user gesture (which also unlocks audio).
+// Real poker table sounds — Kenney "Casino Audio" samples (CC0, bundled under
+// src/assets/sfx). Played through the Web Audio API for low latency and so the
+// mute toggle + per-event volume work. Muted by default; the first unmute is a
+// user gesture, which also unlocks audio and preloads the samples.
+
+import cardShuffle from "../assets/sfx/card-shuffle.ogg";
+import cardSlide1 from "../assets/sfx/card-slide-1.ogg";
+import cardSlide3 from "../assets/sfx/card-slide-3.ogg";
+import cardSlide5 from "../assets/sfx/card-slide-5.ogg";
+import cardPlace2 from "../assets/sfx/card-place-2.ogg";
+import cardShove1 from "../assets/sfx/card-shove-1.ogg";
+import cardShove3 from "../assets/sfx/card-shove-3.ogg";
+import chipLay1 from "../assets/sfx/chip-lay-1.ogg";
+import chipsStack2 from "../assets/sfx/chips-stack-2.ogg";
+import chipsStack4 from "../assets/sfx/chips-stack-4.ogg";
+import chipsHandle2 from "../assets/sfx/chips-handle-2.ogg";
+import chipsCollide1 from "../assets/sfx/chips-collide-1.ogg";
+
+export type Sfx = "deal" | "card" | "chip" | "check" | "fold" | "turn" | "win" | "reveal";
+
+// Each event maps to one or more real samples (a random variant plays) + a gain.
+const EVENTS: Record<Exclude<Sfx, "turn">, { urls: string[]; gain: number }> = {
+  deal: { urls: [cardShuffle], gain: 0.55 },
+  card: { urls: [cardSlide1, cardSlide3, cardPlace2], gain: 0.8 },
+  chip: { urls: [chipsStack2, chipLay1, chipsStack4], gain: 0.9 },
+  check: { urls: [chipsHandle2], gain: 0.5 },
+  fold: { urls: [cardShove1, cardShove3], gain: 0.75 },
+  win: { urls: [chipsCollide1], gain: 1.0 },
+  reveal: { urls: [cardSlide5], gain: 0.6 },
+};
+const ALL_URLS = [...new Set(Object.values(EVENTS).flatMap((e) => e.urls))];
 
 let ctx: AudioContext | null = null;
 let muted = (localStorage.getItem("holdem:muted") ?? "1") !== "0"; // default: muted
+const buffers = new Map<string, AudioBuffer>();
+const loading = new Map<string, Promise<AudioBuffer | null>>();
 
 function ac(): AudioContext {
   if (!ctx) {
@@ -13,6 +43,24 @@ function ac(): AudioContext {
   return ctx;
 }
 
+function load(url: string): Promise<AudioBuffer | null> {
+  const cached = buffers.get(url);
+  if (cached) return Promise.resolve(cached);
+  let p = loading.get(url);
+  if (!p) {
+    p = fetch(url)
+      .then((r) => r.arrayBuffer())
+      .then((b) => ac().decodeAudioData(b))
+      .then((buf) => {
+        buffers.set(url, buf);
+        return buf;
+      })
+      .catch(() => null);
+    loading.set(url, p);
+  }
+  return p;
+}
+
 export function isMuted(): boolean {
   return muted;
 }
@@ -20,7 +68,10 @@ export function isMuted(): boolean {
 export function setMuted(m: boolean): void {
   muted = m;
   localStorage.setItem("holdem:muted", m ? "1" : "0");
-  if (!m) void ac().resume?.(); // unlock on the unmuting gesture
+  if (!m) {
+    void ac().resume?.(); // unlock on the unmuting gesture
+    for (const url of ALL_URLS) void load(url); // warm the cache
+  }
 }
 
 export function toggleMuted(): boolean {
@@ -28,101 +79,51 @@ export function toggleMuted(): boolean {
   return muted;
 }
 
-/** Exponential attack/decay envelope on a gain node. */
-function env(g: GainNode, t0: number, peak: number, dur: number, attack = 0.005): void {
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.linearRampToValueAtTime(peak, t0 + attack);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-}
-
-interface ToneOpts {
-  type?: OscillatorType;
-  gain?: number;
-  delay?: number;
-}
-
-function tone(freq: number, dur: number, { type = "sine", gain = 0.2, delay = 0 }: ToneOpts = {}): void {
+function playBuffer(buf: AudioBuffer, gain: number): void {
   const c = ac();
-  const t0 = c.currentTime + delay;
-  const o = c.createOscillator();
-  const g = c.createGain();
-  o.type = type;
-  o.frequency.value = freq;
-  o.connect(g);
-  g.connect(c.destination);
-  env(g, t0, gain, dur);
-  o.start(t0);
-  o.stop(t0 + dur + 0.03);
-}
-
-interface NoiseOpts {
-  gain?: number;
-  delay?: number;
-  hp?: number;
-  lp?: number;
-}
-
-function noise(dur: number, { gain = 0.2, delay = 0, hp = 0, lp = 9000 }: NoiseOpts = {}): void {
-  const c = ac();
-  const t0 = c.currentTime + delay;
-  const n = Math.max(1, Math.floor(c.sampleRate * dur));
-  const buf = c.createBuffer(1, n, c.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
   const src = c.createBufferSource();
   src.buffer = buf;
   const g = c.createGain();
-  let node: AudioNode = src;
-  if (hp) {
-    const f = c.createBiquadFilter();
-    f.type = "highpass";
-    f.frequency.value = hp;
-    node.connect(f);
-    node = f;
-  }
-  const low = c.createBiquadFilter();
-  low.type = "lowpass";
-  low.frequency.value = lp;
-  node.connect(low);
-  low.connect(g);
+  g.gain.value = gain;
+  src.connect(g);
   g.connect(c.destination);
-  env(g, t0, gain, dur);
-  src.start(t0);
-  src.stop(t0 + dur + 0.03);
+  src.start();
 }
 
-export type Sfx = "deal" | "card" | "chip" | "check" | "fold" | "turn" | "win" | "reveal" | "click";
-
-const SFX: Record<Sfx, () => void> = {
-  deal: () => noise(0.2, { gain: 0.14, hp: 1000, lp: 6000 }),
-  card: () => {
-    noise(0.09, { gain: 0.12, hp: 2200, lp: 9000 });
-    tone(900, 0.05, { type: "triangle", gain: 0.03, delay: 0.02 });
-  },
-  chip: () => {
-    noise(0.05, { gain: 0.13, hp: 3000, lp: 12000 });
-    tone(2400, 0.04, { type: "square", gain: 0.04, delay: 0.01 });
-    tone(3100, 0.04, { type: "square", gain: 0.03, delay: 0.045 });
-  },
-  check: () => tone(150, 0.09, { type: "sine", gain: 0.24 }),
-  fold: () => noise(0.13, { gain: 0.1, hp: 400, lp: 2400 }),
-  turn: () => {
-    tone(660, 0.12, { type: "sine", gain: 0.17 });
-    tone(880, 0.15, { type: "sine", gain: 0.17, delay: 0.11 });
-  },
-  win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.36, { type: "triangle", gain: 0.13, delay: i * 0.09 })),
-  reveal: () => {
-    tone(392, 0.2, { type: "sine", gain: 0.1 });
-    tone(523, 0.22, { type: "sine", gain: 0.1, delay: 0.12 });
-  },
-  click: () => tone(1200, 0.03, { type: "square", gain: 0.05 }),
-};
+/** A short two-tone chime for "your turn" — a UI alert, not a table sound. */
+function chime(): void {
+  const c = ac();
+  const now = c.currentTime;
+  for (const [freq, delay] of [[660, 0], [880, 0.11]] as const) {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = "sine";
+    o.frequency.value = freq;
+    o.connect(g);
+    g.connect(c.destination);
+    const t = now + delay;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.18, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.start(t);
+    o.stop(t + 0.19);
+  }
+}
 
 export function play(name: Sfx): void {
   if (muted) return;
   try {
     void ac().resume?.();
-    SFX[name]?.();
+    if (name === "turn") {
+      chime();
+      return;
+    }
+    const ev = EVENTS[name];
+    if (!ev) return;
+    const url = ev.urls[Math.floor(Math.random() * ev.urls.length)];
+    const buf = buffers.get(url);
+    if (buf) playBuffer(buf, ev.gain);
+    else void load(url).then((b) => b && !muted && playBuffer(b, ev.gain));
   } catch {
     /* audio not available — ignore */
   }
