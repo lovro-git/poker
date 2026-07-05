@@ -39,7 +39,7 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
     return n;
   };
 
-  const createBtn = h("button", { class: "btn btn-gold", type: "button" }, "Create room");
+  const createBtn = h("button", { class: "btn btn-ghost", type: "button" }, "Create room");
   createBtn.onclick = () => {
     const n = needName();
     if (!n) return;
@@ -53,7 +53,7 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
     });
   };
 
-  const joinBtn = h("button", { class: "btn btn-ghost", type: "button" }, "Join room");
+  const joinBtn = h("button", { class: "btn btn-gold btn-join", type: "button" }, "Join room");
   joinBtn.onclick = () => {
     const n = needName();
     if (!n) return;
@@ -65,14 +65,19 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
   clear(root).append(
     h("div", { class: "lobby" },
       h("div", { class: "lobby-card" },
-        h("div", { class: "brand" },
-          h("h1", {}, "Hold'em"),
+        h("div", { class: "lobby-top" },
           h("span", { class: "suits" }, h("span", {}, "♠"), h("span", { class: "r" }, "♥"), h("span", { class: "r" }, "♦"), h("span", {}, "♣")),
           h("span", { class: "brand-spacer" }),
           themeToggle("icon-btn"),
         ),
-        h("p", { class: "lobby-sub" }, "Peer-to-peer poker. Create a room, share the key, deal in."),
         h("div", { class: "field" }, h("label", {}, "Your name"), nameInput),
+        // Join is the primary action — enter a key your host shared and deal in.
+        h("div", { class: "join-block" },
+          h("div", { class: "field" }, h("label", {}, "Room key"), keyInput),
+          joinBtn,
+        ),
+        h("div", { class: "divider" }, "or start a new table"),
+        // Hosting is the secondary path, tucked below.
         h("div", { class: "field" },
           h("label", {}, "New table"),
           h("div", { class: "seg" }, cashBtn, tourBtn),
@@ -89,9 +94,6 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
           ),
         ),
         createBtn,
-        h("div", { class: "divider" }, "or join an existing one"),
-        h("div", { class: "field" }, h("label", {}, "Room key"), keyInput),
-        joinBtn,
         errEl,
       ),
     ),
@@ -294,7 +296,8 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>, animHole: boole
   );
 }
 
-/** A player row for the list/grid layout (alternative to the oval). */
+/** A compact player row for the list layout: small avatar disc · name/chips ·
+ *  bet + status. Kept short so a full table fits without scrolling. */
 function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement {
   const seat = view.seats[i];
   if (!seat) return h("div", { class: "pl-row is-open" }, h("span", { class: "pl-openseat" }, "Open seat"));
@@ -304,33 +307,33 @@ function playerRow(view: ClientView, i: number, winSet: Set<Card>): HTMLElement 
   const isWinner = view.stage === "showdown" && !!view.result?.pots.some((p) => p.winners.includes(i));
   const dealt = seat.status === "active" || seat.status === "allin" || seat.status === "folded";
   const inactive = !dealt || seat.status === "folded";
-  const cls = ["pl-row", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
+  const cls = ["pl-row", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner"]
     .filter(Boolean).join(" ");
 
-  const faces = seat.holeCards && !isMe && !seat.mucked;
-  const cardEls: HTMLElement[] = !dealt
-    ? []
-    : faces
-      ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
-      : [cardEl(null, { small: true, faceDown: true }), cardEl(null, { small: true, faceDown: true })];
+  // One position chip (D takes priority), pinned to the avatar corner.
+  const badge = seat.isButton ? "d" : seat.isBB ? "bb" : seat.isSB ? "sb" : "";
 
-  const badges: string[] = [];
-  if (seat.isButton) badges.push("D");
-  if (seat.isSB) badges.push("SB");
-  if (seat.isBB) badges.push("BB");
+  const ava = h("div", { class: "pl-ava" },
+    h("div", { class: "pl-ava-face", style: `--av-color:${avatarColor(seat.name)}` }, initial(seat.name)),
+    !seat.connected ? h("span", { class: "pl-off-dot", title: "Disconnected" }) : null,
+    badge ? h("span", { class: `pl-badge ${badge}` }, badge.toUpperCase()) : null,
+  );
+
+  // Only show cards face-up (at showdown); face-down backs add height for no info.
+  const faces = seat.holeCards && !isMe && !seat.mucked;
+  const cardsEl = faces
+    ? h("div", { class: "pl-cards" }, ...seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) })))
+    : null;
 
   return h("div", { class: cls },
-    badges.length ? h("div", { class: "pl-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
-    cardEls.length ? h("div", { class: "pl-cards" }, ...cardEls) : null,
+    ava,
     h("div", { class: "pl-info" },
-      h("div", { class: "pl-name" },
-        !seat.connected && h("span", { class: "pl-off", title: "Disconnected" }, "●"),
-        seat.name + (isMe ? " (you)" : ""),
-      ),
+      h("div", { class: "pl-name" }, seat.name + (isMe ? " (you)" : "")),
       h("div", { class: "pl-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
     ),
-    h("div", { class: "pl-act" },
-      seat.committedRound > 0 && chipBadge(seat.committedRound),
+    h("div", { class: "pl-right" },
+      cardsEl,
+      seat.committedRound > 0 ? chipBadge(seat.committedRound) : null,
       playerActionCell(view, i, seat),
     ),
   );

@@ -354,6 +354,19 @@ input:focus-visible {
   box-shadow: var(--shadow-lg);
   padding: 30px;
 }
+.lobby-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.join-block {
+  margin-bottom: 6px;
+}
+.btn-join {
+  font-size: 16px;
+  padding: 15px;
+}
 .brand {
   display: flex;
   align-items: center;
@@ -973,13 +986,13 @@ input:focus-visible {
   text-shadow: none;
 }
 .players {
-  width: clamp(150px, 24vw, 260px);
+  width: clamp(190px, 26vw, 280px);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   overflow: visible;
   padding-right: 2px;
-  --card-sm-w: clamp(17px, 3.4vw, 22px); /* list cards stay tiny */
+  --card-sm-w: clamp(15px, 3vw, 20px); /* showdown cards stay tiny */
 }
 .players-head {
   font-family: var(--ff-display);
@@ -987,16 +1000,16 @@ input:focus-visible {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--dim);
-  padding: 2px 2px 0;
+  padding: 2px 2px 4px;
 }
 .pl-row {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 5px 8px;
+  border-radius: 12px;
+  padding: 5px 10px 5px 6px;
   box-shadow: var(--shadow);
   transition: 0.18s;
 }
@@ -1006,11 +1019,15 @@ input:focus-visible {
   box-shadow: none;
   color: var(--dim);
   justify-content: center;
-  font-size: 12px;
+  font-size: 11.5px;
   padding: 10px;
 }
 .pl-row.is-out {
   opacity: 0.5;
+}
+.pl-row.is-me {
+  border-color: var(--gold-soft);
+  background: linear-gradient(0deg, rgba(224, 168, 63, 0.08), rgba(224, 168, 63, 0.08)), var(--panel);
 }
 .pl-row.is-acting {
   border-color: var(--gold);
@@ -1020,43 +1037,92 @@ input:focus-visible {
   border-color: var(--go);
   box-shadow: 0 0 0 1px var(--go), 0 0 20px rgba(31, 157, 105, 0.28);
 }
-.pl-pos {
-  width: 20px;
+/* Small avatar disc with a position chip + presence dot pinned to it. */
+.pl-ava {
+  position: relative;
+  width: 32px;
+  height: 32px;
   flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+}
+.pl-ava-face {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  background: var(--av-color, #556);
+  box-shadow: inset 0 -2px 5px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.pl-row.is-acting .pl-ava-face {
+  box-shadow: inset 0 -2px 5px rgba(0, 0, 0, 0.3), 0 0 0 2px var(--gold);
+}
+.pl-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -4px;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 8px;
+  line-height: 1;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--panel);
+}
+.pl-badge.d {
+  background: #fff;
+  color: #14181a;
+}
+.pl-badge.sb {
+  background: #b9c9e6;
+  color: #1a2740;
+}
+.pl-badge.bb {
+  background: var(--gold);
+  color: #2a1c05;
+}
+.pl-off-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 1.5px solid var(--panel);
 }
 .pl-cards {
   display: flex;
-  gap: 3px;
+  gap: 2px;
   flex: none;
 }
 .pl-info {
   min-width: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 .pl-name {
   font-family: var(--ff-display);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 12.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.pl-off {
-  color: var(--red);
-  font-size: 8px;
 }
 .pl-chips {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--chip-ink);
   font-family: var(--ff-display);
 }
@@ -1064,11 +1130,10 @@ input:focus-visible {
   font-size: 0.8em;
   opacity: 0.85;
 }
-.pl-act {
+.pl-right {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
   flex: none;
 }
 /* Restyle status pills/clock for the light list rows. */
@@ -1531,7 +1596,8 @@ input:focus-visible {
     --av-size: clamp(36px, 9vw, 52px);
   }
 
-  /* list layout on phones: 3-across grid, community on top */
+  /* list layout on phones: 2-across compact rows, community on top —
+     keeps every seat visible without scrolling */
   .stage-wrap {
     flex-direction: column;
     gap: 10px;
@@ -1541,8 +1607,8 @@ input:focus-visible {
   .players {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
     overflow: visible;
     padding: 0;
   }
@@ -1551,31 +1617,23 @@ input:focus-visible {
   }
   .pl-row {
     min-width: 0;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 5px;
-    padding: 8px 6px;
-    border-radius: 14px;
+    gap: 7px;
+    padding: 4px 8px 4px 5px;
   }
   .pl-row.is-open {
     min-width: 0;
     justify-content: center;
-    min-height: 74px;
+    padding: 12px 6px;
   }
-  .pl-info {
-    flex: none;
-    text-align: center;
+  .pl-ava {
+    width: 30px;
+    height: 30px;
   }
   .pl-name {
-    max-width: 84px;
     font-size: 12px;
   }
-  .pl-act {
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
-    min-height: 18px;
+  .pl-chips {
+    font-size: 10.5px;
   }
   .table-main {
     order: -1;
