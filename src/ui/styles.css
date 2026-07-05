@@ -26,14 +26,19 @@
   --red: #b23b34; /* wine */
   --card-border: rgba(40, 30, 10, 0.22);
 
-  /* Green felt table — stays green in both themes (a real table in a lit room) */
-  --felt-hi: #2a8a63;
-  --felt-lo: #146045;
-  --felt-edge: #0c3f2e;
-  --rail: #3a2417;
-  --rail-hi: #5a3a25;
-  --felt-ink: #eafff5;
-  --felt-ink-dim: rgba(234, 255, 245, 0.6);
+  /* Green felt table. Lighter/fresher in the light theme, deeper in dark. */
+  --felt-hi: #46b083;
+  --felt-lo: #279067;
+  --felt-edge: #17694b;
+  --rail: #7a5334;
+  --rail-hi: #9a6c44;
+  --felt-ink: #f2fff9;
+  --felt-ink-dim: rgba(242, 255, 249, 0.72);
+
+  /* Playing-card face — white in light, dark charcoal in dark mode. */
+  --card-bg: linear-gradient(160deg, #ffffff, #eceef0);
+  --card-ink: #16202a;
+  --card-ink-red: #b23b34;
 
   --r-card: clamp(7px, 1vw, 12px);
   --r-btn: 12px;
@@ -71,7 +76,17 @@
   --go: #45cd8b;
   --go-ink: #45cd8b;
   --red: #e5665f;
-  --card-border: rgba(0, 0, 0, 0.06);
+  --card-border: rgba(255, 255, 255, 0.14);
+
+  /* Deeper felt + dark playing-card faces in dark mode. */
+  --felt-hi: #1f7856;
+  --felt-lo: #0f5138;
+  --felt-edge: #0a3324;
+  --rail: #4a3220;
+  --rail-hi: #6a4a30;
+  --card-bg: linear-gradient(160deg, #272c34, #171b21);
+  --card-ink: #e9eef4;
+  --card-ink-red: #ff6d6d;
 
   --shadow: 0 8px 26px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 22px 55px rgba(0, 0, 0, 0.5);
@@ -171,8 +186,8 @@ input:focus-visible {
   width: var(--card-big-w);
   height: calc(var(--card-big-w) * 1.4);
   border-radius: var(--r-card);
-  background: linear-gradient(160deg, #fff, #eceef0);
-  color: #14181a;
+  background: var(--card-bg);
+  color: var(--card-ink);
   position: relative;
   border: 1px solid var(--card-border);
   box-shadow: 0 4px 12px rgba(20, 30, 50, 0.16);
@@ -189,10 +204,10 @@ input:focus-visible {
   height: calc(var(--card-sm-w) * 1.4);
 }
 .card--red {
-  color: var(--red);
+  color: var(--card-ink-red);
 }
 .card--black {
-  color: #1b2530;
+  color: var(--card-ink);
 }
 .card.is-dim {
   filter: saturate(0.55) brightness(0.85);
