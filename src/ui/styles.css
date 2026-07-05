@@ -1574,6 +1574,15 @@ input:focus-visible {
   border: none;
   color: var(--text);
   font-family: var(--ff-display);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mini-btn:disabled {
+  cursor: default;
+  opacity: 1;
+  background: rgba(31, 157, 105, 0.18);
+  color: var(--go-ink);
 }
 .mini-btn:hover {
   filter: brightness(1.06);

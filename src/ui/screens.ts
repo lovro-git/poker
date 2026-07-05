@@ -265,8 +265,14 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>, animHole: boole
 
   // Cards tuck behind the plate: yours are peekable, opponents' show at showdown.
   const faces = seat.holeCards && !seat.mucked;
+  // Your hand is "on show" once the pot went to a real showdown, or once you
+  // voluntarily reveal an uncalled win — then flip it face-up at your seat too.
+  const iShow = isMe && seat.holeCards && ((showdown && view.result?.wentToShowdown) || seat.revealVoluntary);
   let cards: HTMLElement | null = null;
-  if (isMe && seat.holeCards) {
+  if (iShow) {
+    const cardEls = seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }));
+    cards = h("div", { class: "pod-cards" }, ...cardEls);
+  } else if (isMe && seat.holeCards) {
     cards = peekCards(seat.holeCards, folded, animHole, "seat-cards");
   } else if (dealt && !isMe) {
     const cardEls = faces
@@ -537,10 +543,13 @@ function myButtons(view: ClientView, hs: TableHandlers): HTMLElement[] {
   }
   if (view.stage === "showdown" && (seat.status === "active" || seat.status === "allin")) {
     // Uncalled win (everyone folded): let the winner optionally reveal their hand.
-    if (!view.result?.wentToShowdown && view.result?.pots.some((p) => p.winners.includes(view.yourSeat)) && !seat.revealVoluntary) {
+    const wonUncalled = !view.result?.wentToShowdown && !!view.result?.pots.some((p) => p.winners.includes(view.yourSeat));
+    if (wonUncalled && !seat.revealVoluntary) {
       const b = h("button", { class: "mini-btn", type: "button" }, "Show cards");
       b.onclick = () => hs.show(true);
       buttons.push(b);
+    } else if (wonUncalled && seat.revealVoluntary) {
+      buttons.push(h("button", { class: "mini-btn on", type: "button", disabled: "" }, icon("check"), h("span", {}, "Cards shown")));
     }
   }
   // Rebuy only when actually busted (0 chips), between hands — no voluntary top-up.
