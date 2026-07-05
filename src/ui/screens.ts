@@ -386,6 +386,27 @@ function centerMessage(view: ClientView): string {
   return "";
 }
 
+/** A prominent centre-of-table announcement when a hand (or the tournament) ends. */
+function winnerBanner(view: ClientView): HTMLElement | null {
+  if (view.tournamentWinner !== null) {
+    return h("div", { class: "winner-banner is-champ" },
+      h("div", { class: "winner-trophy" }, "🏆"),
+      h("div", { class: "winner-name" }, `${view.seats[view.tournamentWinner]?.name ?? "?"} wins the tournament!`),
+    );
+  }
+  if (view.stage !== "showdown" || !view.result) return null;
+  const top = view.result.pots.find((p) => p.winners.length > 0);
+  if (!top) return null;
+  const names = top.winners.map((i) => view.seats[i]?.name ?? "?").join(" & ");
+  const total = Object.values(view.result.payouts).reduce((a, b) => a + b, 0);
+  const score = view.result.wentToShowdown ? view.result.showdown[top.winners[0]]?.score : undefined;
+  return h("div", { class: "winner-banner" },
+    h("div", { class: "winner-amt" }, chipDisc(total), h("span", { class: "tnum" }, `+${total.toLocaleString()}`)),
+    h("div", { class: "winner-name" }, `${names} ${top.winners.length > 1 ? "split the pot" : "wins"}`),
+    score ? h("div", { class: "winner-hand" }, categoryName(score)) : null,
+  );
+}
+
 function community(view: ClientView, winSet: Set<Card>, animFrom: number): HTMLElement {
   const slots: HTMLElement[] = [];
   let dealtIndex = 0; // stagger only the newly dealt cards, so they arrive one by one
@@ -635,6 +656,9 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
   const pot = () => h("div", { class: "pot" }, chipDisc(view.pot), "Pot ", h("span", { class: "tnum" }, view.pot.toLocaleString()));
   const stageLabel = () => h("div", { class: "stage-label" }, STAGE_LABEL[view.stage] ?? "");
   const msg = () => h("div", { class: "msg" }, centerMessage(view));
+  // At round end, a big winner banner replaces the small stage/message line.
+  const banner = winnerBanner(view);
+  const centerInfo = () => (banner ? [banner] : [stageLabel(), msg()]);
 
   const layout = getLayout();
   let body: HTMLElement;
@@ -644,11 +668,11 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
       h("div", { class: "players-head" }, "Players"),
       ...view.seats.map((_, i) => playerRow(view, i, winSet)),
     );
-    const tableMain = h("div", { class: "table-main" }, pot(), community(view, winSet, animFrom), stageLabel(), msg());
+    const tableMain = h("div", { class: "table-main" }, pot(), community(view, winSet, animFrom), ...centerInfo());
     body = h("div", { class: "stage-wrap" }, players, tableMain);
   } else {
     // Green-felt oval: pot + board in the center, seats around the edge.
-    const center = h("div", { class: "center" }, pot(), community(view, winSet, animFrom), stageLabel(), msg());
+    const center = h("div", { class: "center" }, pot(), community(view, winSet, animFrom), ...centerInfo());
     const total = view.config.maxSeats;
     const arena = h("div", { class: "arena", "data-seats": String(total) }, h("div", { class: "felt" }), center);
     const anchor = view.yourSeat >= 0 ? view.yourSeat : 0;
