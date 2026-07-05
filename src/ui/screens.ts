@@ -3,6 +3,7 @@ import { categoryName } from "../engine/evaluator";
 import type { Format, PlayerAction } from "../engine/types";
 import { cardEl, chipBadge, chipDisc, flipCard } from "./cards";
 import { applyTheme, chips, clear, getLayout, getReveal, getTheme, h, icon, setLayout, setReveal, themeToggle } from "./dom";
+import { isMuted, toggleMuted } from "./sound";
 import type { ClientView, PublicSeat } from "../net/protocol";
 
 // --- Lobby -----------------------------------------------------------------
@@ -156,6 +157,20 @@ function settingsMenu(hs: TableHandlers): HTMLElement {
   );
   gear.onclick = (e) => { e.stopPropagation(); settingsOpen = !settingsOpen; panel.classList.toggle("open", settingsOpen); };
   return h("div", { class: "settings" }, gear, panel);
+}
+
+/** Topbar speaker toggle to mute/unmute sounds. */
+function muteButton(): HTMLElement {
+  const btn = h("button", { class: "icon-btn", type: "button" });
+  const paint = () => {
+    const m = isMuted();
+    btn.replaceChildren(icon(m ? "volume-xmark" : "volume-high"));
+    btn.title = m ? "Sound off — tap to unmute" : "Sound on — tap to mute";
+    btn.classList.toggle("is-muted", m);
+  };
+  paint();
+  btn.onclick = () => { toggleMuted(); paint(); };
+  return btn;
 }
 
 export interface UIState {
@@ -716,6 +731,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         h("span", { class: "tb-key" }, h("span", { class: "tb-room-label" }, "Room "), h("b", {}, roomKeyFromHash()), copyBtn),
         h("span", { class: "tb-spacer" }),
         h("span", { class: "tb-meta" }, meta, view.spectatorCount > 0 ? ` · ${view.spectatorCount} watching` : "", " · hand ", h("b", {}, String(view.handNumber))),
+        muteButton(),
         settingsMenu(hs),
         leaveBtn,
       ),

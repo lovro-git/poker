@@ -5,6 +5,7 @@ import type { TableConfig } from "./engine/types";
 import { createGuest, createHost, resumeHost, type Client, type Identity } from "./net/room";
 import type { ClientView } from "./net/protocol";
 import { renderConnecting, renderLobby, renderTable, type TableHandlers, type UIState } from "./ui/screens";
+import { play as playSfx } from "./ui/sound";
 
 const root = document.getElementById("app")!;
 
@@ -55,8 +56,17 @@ function toast(text: string) {
   setTimeout(() => t.remove(), 2000);
 }
 
+let suppressActionSfx = false;
+
 const handlers: TableHandlers = {
-  act: (a) => client?.act(a),
+  act: (a) => {
+    // Immediate local feedback (the view diff can't attribute the change to us).
+    if (a.type === "fold") playSfx("fold");
+    else if (a.type === "check") playSfx("check");
+    else playSfx("chip"); // call / raise
+    suppressActionSfx = true;
+    client?.act(a);
+  },
   rebuy: () => client?.rebuy(),
   sitOut: (v) => client?.sitOut(v),
   show: (v) => client?.show(v),
@@ -116,12 +126,34 @@ function startClient(newClient: Client, roomKey: string) {
       ui.turnKey = turnKey;
       if (v.toActSeat === v.yourSeat) ui.raiseTo = 0;
     }
+    soundForView(view, v);
     view = v;
     renderTable(root, v, ui, handlers);
   });
 
   if (clockTimer) clearInterval(clockTimer);
   clockTimer = setInterval(tickClock, 250);
+}
+
+/** Fire a sound for whatever changed between two consecutive views. */
+function soundForView(prev: ClientView | null, v: ClientView) {
+  if (!prev) return;
+  if (v.handNumber !== prev.handNumber) {
+    playSfx("deal"); // new hand dealt
+  } else if (v.board.length > prev.board.length) {
+    playSfx("card"); // flop/turn/river dealt
+  } else if (!suppressActionSfx) {
+    // Another player's action.
+    const folded = v.seats.some((s, i) => s && s.status === "folded" && prev.seats[i]?.status !== "folded");
+    if (folded) playSfx("fold");
+    else if (v.pot > prev.pot) playSfx("chip"); // call / bet / raise
+    else if (v.toActSeat !== prev.toActSeat && v.stage === prev.stage && v.stage !== "showdown") playSfx("check");
+  }
+  suppressActionSfx = false; // only skips the immediate echo of our own action
+  // Your turn just started.
+  if (v.stage !== "showdown" && v.toActSeat >= 0 && v.toActSeat === v.yourSeat && prev.toActSeat !== v.yourSeat) {
+    playSfx("turn");
+  }
 }
 
 function tickClock() {
