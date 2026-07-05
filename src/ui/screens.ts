@@ -551,18 +551,15 @@ function myButtons(view: ClientView, hs: TableHandlers): HTMLElement[] {
     buttons.push(back);
   }
   if (view.stage === "showdown" && (seat.status === "active" || seat.status === "allin")) {
-    if (view.result?.wentToShowdown && !seat.mucked) {
-      const b = h("button", { class: "mini-btn", type: "button" }, "Muck");
-      b.onclick = () => hs.show(false);
-      buttons.push(b);
-    } else if (!view.result?.wentToShowdown && view.result?.pots.some((p) => p.winners.includes(view.yourSeat)) && !seat.revealVoluntary && !seat.holeCards) {
+    if (!view.result?.wentToShowdown && view.result?.pots.some((p) => p.winners.includes(view.yourSeat)) && !seat.revealVoluntary && !seat.holeCards) {
       const b = h("button", { class: "mini-btn", type: "button" }, "Show cards");
       b.onclick = () => hs.show(true);
       buttons.push(b);
     }
   }
-  if (view.config.format === "cash" && seat.chips < view.config.buyIn && view.stage !== "preflop" && view.stage !== "flop" && view.stage !== "turn" && view.stage !== "river") {
-    const b = h("button", { class: "mini-btn on", type: "button" }, seat.chips <= 0 ? "Rebuy" : "Top up");
+  // Rebuy only when actually busted (0 chips), between hands — no voluntary top-up.
+  if (view.config.format === "cash" && seat.chips <= 0 && view.stage !== "preflop" && view.stage !== "flop" && view.stage !== "turn" && view.stage !== "river") {
+    const b = h("button", { class: "mini-btn on", type: "button" }, "Rebuy");
     b.onclick = () => hs.rebuy();
     buttons.push(b);
   }
