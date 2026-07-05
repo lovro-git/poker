@@ -218,7 +218,9 @@ class HostClient implements Client {
       const seatIdx = s.toActSeat;
       const la = legalActions(s, seatIdx);
       if (la) {
-        applyAction(s, seatIdx, la.canCheck ? { type: "check" } : { type: "fold" });
+        // Timing out means you're away — fold out of the current hand (even if a
+        // free check was available) and stay out of future hands until you sit back.
+        applyAction(s, seatIdx, { type: "fold" });
         setAfk(s, seatIdx);
         this.afterChange();
       }
