@@ -43,7 +43,7 @@
 
   /* Cards scale with the viewport so the layout never restructures. */
   --card-big-w: clamp(58px, 9.5vw, 116px); /* my hole cards (footer) */
-  --card-board-w: clamp(56px, 7vw, 100px); /* community cards — standardized, big */
+  --card-board-w: clamp(44px, 6vw, 82px); /* community cards */
   --card-sm-w: clamp(30px, 4.6vw, 46px); /* opponents' fanned pod cards */
   --av-size: clamp(48px, 6vw, 78px); /* seat avatar disc */
 
@@ -684,22 +684,52 @@ input:focus-visible {
 .arena[data-seats="8"] {
   --av-size: clamp(38px, 5vw, 58px);
   --card-sm-w: clamp(24px, 3.6vw, 38px);
+  --card-board-w: clamp(36px, 4.8vw, 62px);
 }
-/* --- Avatar-disc seat pod --- */
+/* --- Nameplate seat pod: solid capsule (avatar + name/stack), cards behind --- */
 .avatar-pod {
   position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
+  justify-content: center;
   width: max-content;
-  max-width: calc(var(--av-size) * 2.4);
   color: var(--felt-ink);
-  text-align: center;
-  transition: opacity 0.18s;
+  transition: opacity 0.18s, transform 0.18s;
 }
 .avatar-pod.is-out {
-  opacity: 0.42;
+  opacity: 0.5;
+}
+/* The capsule is drawn ON TOP of the cards, so the cards can only peek above its
+   top edge and never cover the avatar face. */
+.plate {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 11px 3px 3px;
+  border-radius: 999px;
+  background: rgba(11, 19, 15, 0.82);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  max-width: calc(var(--av-size) * 3.6);
+}
+.avatar-pod.is-me .plate,
+.avatar-pod.is-acting .plate {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 0 0 1.5px var(--gold);
+}
+.avatar-pod.is-winner {
+  z-index: 6;
+}
+.avatar-pod.is-winner .plate {
+  background: rgba(9, 46, 30, 0.95);
+  box-shadow: 0 6px 20px rgba(31, 157, 105, 0.55), inset 0 0 0 2px var(--go);
+  transform: scale(1.06);
+}
+.plate-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+  padding-right: 1px;
 }
 .av {
   position: relative;
@@ -770,82 +800,104 @@ input:focus-visible {
   border: 2px solid var(--felt-lo);
   z-index: 2;
 }
-/* opponents' cards fan out behind the avatar */
-/* opponents' cards peek above the avatar (never over the name/chips) */
+/* Cards tuck behind the plate top — straight (no fan) so a showdown reads clean.
+   Only the part above the plate's top edge shows; the plate hides the rest. */
 .avatar-pod .pod-cards {
   position: absolute;
-  top: 0;
   left: 50%;
-  transform: translate(-50%, -72%);
+  top: 0;
+  transform: translate(-50%, -62%);
   display: flex;
-  gap: 0;
-  z-index: 0;
+  gap: 2px;
+  z-index: 1;
 }
-.avatar-pod .pod-cards .card:first-child {
-  transform: rotate(-12deg) translateX(32%);
-}
-.avatar-pod .pod-cards .card:last-child {
-  transform: rotate(12deg) translateX(-32%);
-}
-/* your own cards at your seat: bigger, peekable, above your avatar */
+/* your own cards at your seat: bigger + peekable, on top so they stay tappable */
 .avatar-pod .seat-cards {
   position: absolute;
-  top: 0;
   left: 50%;
-  transform: translate(-50%, -66%);
-  z-index: 0;
+  top: 0;
+  transform: translate(-50%, -64%);
+  z-index: 3;
   display: flex;
   gap: 3px;
-  --card-big-w: clamp(36px, 7.5vw, 56px);
+  --card-big-w: clamp(34px, 7vw, 52px);
 }
 .avatar-pod .seat-cards .peek-hint {
   display: none;
 }
-.avatar-pod.is-acting .seat-cards,
-.avatar-pod .seat-cards {
-  z-index: 5; /* keep your cards tappable above the avatar */
+/* Winner: brighter, larger cards. Everyone else's cards dim at showdown. */
+.avatar-pod.is-winner .pod-cards {
+  z-index: 7;
+  --card-sm-w: calc(var(--av-size) * 0.85);
+}
+.avatar-pod.is-loser .pod-cards {
+  opacity: 0.7;
 }
 .pod-name {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-width: calc(var(--av-size) * 2.3);
-  margin-top: 2px;
-}
-.pod-nametxt {
   font-family: var(--ff-display);
   font-weight: 600;
-  font-size: clamp(10px, 1.35vw, 12.5px);
+  font-size: clamp(10px, 1.3vw, 12.5px);
+  line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  max-width: calc(var(--av-size) * 2);
+}
+.arena[data-seats="7"] .pod-name,
+.arena[data-seats="8"] .pod-name {
+  max-width: calc(var(--av-size) * 1.5);
+}
+.arena[data-seats="7"] .plate,
+.arena[data-seats="8"] .plate {
+  gap: 5px;
+  padding: 2px 8px 2px 2px;
 }
 .pod-chips {
-  font-size: clamp(10.5px, 1.4vw, 13px);
+  font-size: clamp(10px, 1.3vw, 12.5px);
+  line-height: 1.15;
   color: var(--gold-soft);
   font-family: var(--ff-display);
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
-/* D/SB/BB chips on the avatar's bottom-left corner */
-.pod-pos {
+/* D/SB/BB button pinned to the avatar's lower edge. */
+.pod-btn {
   position: absolute;
-  bottom: -3px;
-  left: -5px;
-  display: flex;
-  gap: 2px;
+  bottom: -5px;
+  left: calc(3px + var(--av-size) / 2);
+  transform: translateX(-50%);
   z-index: 3;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 9px;
+  line-height: 1;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1.5px solid rgba(11, 19, 15, 0.9);
 }
-/* bet chips just below the pod */
+.pod-btn.d {
+  background: linear-gradient(180deg, #fff, #dfe3df);
+  color: #14181a;
+}
+.pod-btn.sb {
+  background: #b9c9e6;
+  color: #1a2740;
+}
+.pod-btn.bb {
+  background: var(--gold);
+  color: #2a1c05;
+}
+/* Bet chips a short hop toward the pot — hugging the plate, clear of the board. */
 .pod-bet {
   position: absolute;
   left: 50%;
-  top: calc(var(--av-size) / 2);
-  --bet-r: calc(var(--av-size) * 0.95 + 18px);
+  top: 50%;
+  --bet-r: calc(var(--av-size) * 0.62 + 30px);
   transform: translate(
     calc(-50% + var(--ux, 0) * var(--bet-r)),
     calc(-50% + var(--uy, 0) * var(--bet-r))
@@ -853,11 +905,16 @@ input:focus-visible {
   white-space: nowrap;
   z-index: 4;
 }
-.avatar-pod .pl-clock {
-  display: none; /* the ring shows the countdown */
-}
-.avatar-pod .pill {
-  margin-top: 1px;
+/* Action/status tag, centered under the plate. */
+.pod-tag {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  font-size: 9.5px;
+  padding: 2px 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 .pos-tag {
   font-family: var(--ff-display);

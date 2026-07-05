@@ -46,7 +46,7 @@ describe("renderTable — oval table structure", () => {
     expect(mySeat).toBeTruthy();
     const style = mySeat!.getAttribute("style") ?? "";
     expect(style).toMatch(/left:50\.00%/);
-    expect(style).toMatch(/top:86\.00%/);
+    expect(style).toMatch(/top:87\.00%/);
   });
 
   it("renders your own cards at your seat in table view, with a slim footer", () => {

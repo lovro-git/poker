@@ -224,33 +224,14 @@ function winningCards(view: ClientView): Set<Card> {
   return set;
 }
 
-function actionPill(label: string): HTMLElement {
-  const key = label.split(" ")[0].toLowerCase().replace("-", "");
-  return h("span", { class: `pill pill-${key}` }, label);
-}
-
-/** The right-hand cell of a player row: whose-turn clock, last action, or status. */
-function playerActionCell(view: ClientView, i: number, seat: PublicSeat): Node | null {
-  const acting = view.stage !== "showdown" && view.toActSeat === i;
-  if (acting) return h("div", { class: "pl-clock" }, "⏱ ", h("span", { class: "clock-num" }, "—"));
-  if (seat.afk) return h("span", { class: "pill pill-afk" }, "AFK");
-  if (seat.lastAction) return actionPill(seat.lastAction);
-  if (seat.waitingToPlay) return h("span", { class: "pill pill-wait" }, "Next hand");
-  if (seat.chips <= 0 && seat.status !== "allin") {
-    return h("span", { class: "pill pill-wait" }, view.config.format === "cash" ? "Busted" : "Out");
-  }
-  if (seat.status === "sittingOut") return h("span", { class: "pill pill-wait" }, "Away");
-  return null;
-}
-
 /** Ellipse position for a seat (percent), clamped away from the edges/rail. */
 function seatCoords(relPos: number, total: number): { left: number; top: number } {
   const angle = Math.PI / 2 + (relPos / total) * Math.PI * 2;
   // Push seats wider to the rail as the table fills up, so they spread out.
   const many = total >= 7;
-  const cx = 50, cy = 50, rx = many ? 47 : 44, ry = many ? 45 : 42;
-  const left = Math.max(10, Math.min(90, cx + rx * Math.cos(angle)));
-  const top = Math.max(12, Math.min(86, cy + ry * Math.sin(angle)));
+  const cx = 50, cy = 50, rx = many ? 49 : 46, ry = many ? 46 : 43;
+  const left = Math.max(8, Math.min(92, cx + rx * Math.cos(angle)));
+  const top = Math.max(12, Math.min(87, cy + ry * Math.sin(angle)));
   return { left, top };
 }
 
@@ -267,25 +248,44 @@ function avatarColor(name: string): string {
   return `hsl(${hash % 360} 52% 46%)`;
 }
 
-/** A seat pod on the felt: a round avatar with name + chips. Opponents' cards fan
- *  behind the avatar; in table view your own cards sit peekable at your seat. */
+/** The action/status tag shown on a seat's nameplate (not shown at showdown). */
+function podTag(view: ClientView, i: number, seat: PublicSeat): HTMLElement | null {
+  if (view.stage === "showdown" || view.toActSeat === i) return null; // ring shows the turn
+  let label = "", key = "";
+  if (seat.afk) { label = "AFK"; key = "afk"; }
+  else if (seat.status === "allin") { label = "All in"; key = "allin"; }
+  else if (seat.lastAction) { label = seat.lastAction; key = seat.lastAction.split(" ")[0].toLowerCase().replace("-", ""); }
+  else if (seat.waitingToPlay) { label = "Next"; key = "wait"; }
+  else if (seat.chips <= 0) { label = view.config.format === "cash" ? "Busted" : "Out"; key = "wait"; }
+  else if (seat.status === "sittingOut") { label = "Away"; key = "wait"; }
+  else return null;
+  return h("div", { class: `pod-tag pill pill-${key}` }, label);
+}
+
+/** A seat pod on the felt: a solid nameplate (avatar + name + stack) with the
+ *  hole cards tucked behind its top edge, a bet toward the pot, and a status tag.
+ *  Your own cards sit peekable behind your plate. */
 function seatPod(view: ClientView, i: number, winSet: Set<Card>, animHole: boolean): HTMLElement {
   const seat = view.seats[i];
   if (!seat) return h("div", { class: "pod avatar-pod is-empty" }, h("div", { class: "av av-empty" }));
 
   const isMe = i === view.yourSeat;
   const acting = view.stage !== "showdown" && view.toActSeat === i;
-  const isWinner = view.stage === "showdown" && !!view.result?.pots.some((p) => p.winners.includes(i));
+  const showdown = view.stage === "showdown";
+  const isWinner = showdown && !!view.result?.pots.some((p) => p.winners.includes(i));
   const dealt = seat.status === "active" || seat.status === "allin" || seat.status === "folded";
-  const inactive = !dealt || seat.status === "folded";
-  const cls = ["pod", "avatar-pod", isMe && "is-me", inactive && "is-out", acting && "is-acting", isWinner && "is-winner", !seat.connected && "is-off"]
+  const folded = seat.status === "folded";
+  // At showdown, dim everyone who isn't a winner so the winner pops.
+  const dimPod = folded || !dealt || (showdown && !isWinner);
+  const cls = ["pod", "avatar-pod", isMe && "is-me", dimPod && "is-out", acting && "is-acting",
+    isWinner && "is-winner", showdown && !isWinner && dealt && "is-loser", !seat.connected && "is-off"]
     .filter(Boolean).join(" ");
 
-  // Opponents' cards fan behind the avatar; your own are peekable at your seat.
+  // Cards tuck behind the plate: yours are peekable, opponents' show at showdown.
   const faces = seat.holeCards && !seat.mucked;
   let cards: HTMLElement | null = null;
   if (isMe && seat.holeCards) {
-    cards = peekCards(seat.holeCards, seat.status === "folded", animHole, "seat-cards");
+    cards = peekCards(seat.holeCards, folded, animHole, "seat-cards");
   } else if (dealt && !isMe) {
     const cardEls = faces
       ? seat.holeCards!.map((c) => cardEl(c, { small: true, dim: winSet.size > 0 && !winSet.has(c) }))
@@ -293,24 +293,25 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>, animHole: boole
     cards = h("div", { class: "pod-cards" }, ...cardEls);
   }
 
-  const badges: string[] = [];
-  if (seat.isButton) badges.push("D");
-  if (seat.isSB) badges.push("SB");
-  if (seat.isBB) badges.push("BB");
+  const badge = seat.isButton ? "d" : seat.isBB ? "bb" : seat.isSB ? "sb" : "";
 
-  const av = h("div", { class: "av" },
-    h("div", { class: "av-ring" }),
-    h("div", { class: "av-face", style: `--av-color:${avatarColor(seat.name)}` }, initial(seat.name)),
-    !seat.connected ? h("span", { class: "av-off", title: "Disconnected" }) : null,
-    badges.length ? h("div", { class: "pod-pos" }, ...badges.map((b) => h("span", { class: `pos-tag ${b.toLowerCase()}` }, b))) : null,
+  const plate = h("div", { class: "plate" },
+    h("div", { class: "av" },
+      h("div", { class: "av-ring" }),
+      h("div", { class: "av-face", style: `--av-color:${avatarColor(seat.name)}` }, initial(seat.name)),
+      !seat.connected ? h("span", { class: "av-off", title: "Disconnected" }) : null,
+    ),
+    h("div", { class: "plate-txt" },
+      h("div", { class: "pod-name" }, seat.name + (isMe ? " (you)" : "")),
+      h("div", { class: "pod-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
+    ),
+    badge ? h("span", { class: `pod-btn ${badge}` }, badge.toUpperCase()) : null,
   );
 
   return h("div", { class: cls },
     cards,
-    av,
-    h("div", { class: "pod-name" }, h("span", { class: "pod-nametxt" }, seat.name + (isMe ? " (you)" : ""))),
-    h("div", { class: "pod-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
-    playerActionCell(view, i, seat),
+    plate,
+    podTag(view, i, seat),
     seat.committedRound > 0 ? h("div", { class: "pod-bet" }, chipBadge(seat.committedRound)) : null,
   );
 }
