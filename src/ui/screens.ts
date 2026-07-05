@@ -650,7 +650,7 @@ export function renderTable(root: HTMLElement, view: ClientView, ui: UIState, hs
         })();
 
   clear(root).append(
-    h("div", { class: "table-screen" },
+    h("div", { class: `table-screen ${layout === "list" ? "is-list" : "is-oval"}` },
       h("div", { class: "topbar" },
         h("span", { class: "tb-brand" }, "Hold'em"),
         h("span", { class: "tb-key" }, h("span", { class: "tb-room-label" }, "Room "), h("b", {}, roomKeyFromHash()), copyBtn),

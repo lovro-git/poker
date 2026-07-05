@@ -544,6 +544,36 @@ input:focus-visible {
   flex-direction: column;
   overflow: hidden;
 }
+/* Oval table: an immersive green-felt room. The chrome (topbar/footer/menus)
+   adopts a cohesive deep-green palette in both themes so it never clashes with
+   the felt the way light-mode parchment did. The list view keeps the app theme. */
+.table-screen.is-oval {
+  --bg: #0c2419;
+  --bg-2: #103122;
+  --panel: #163f2e;
+  --panel-2: #1f4e3a;
+  --text: #eafff5;
+  --muted: #a6c7b7;
+  --dim: #6f9384;
+  --line: #245a43;
+  --line-soft: #163f2e;
+  --card-border: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  background: #0a2016;
+}
+:root[data-theme="dark"] .table-screen.is-oval {
+  --bg: #06140e;
+  --bg-2: #0a2117;
+  --panel: #0f2e21;
+  --panel-2: #163c2b;
+  --line: #1c4735;
+  --line-soft: #123528;
+  background: #04100a;
+}
+.table-screen.is-oval .topbar,
+.table-screen.is-oval .footer {
+  background: var(--bg-2);
+}
 .topbar {
   display: flex;
   align-items: center;
@@ -625,9 +655,12 @@ input:focus-visible {
   min-height: 0;
   position: relative;
   overflow: hidden;
-  /* A dark "card room" surround in both themes, so the green felt never clashes
-     with the light-mode parchment behind it. */
-  background: radial-gradient(100% 82% at 50% 34%, #2a2016 0%, #17110b 64%, #0f0b07 100%);
+  /* A deep-green vignette that reads as the table's own shadow — cohesive with
+     the felt in both themes (rather than a stark surround that clashes). */
+  background: radial-gradient(105% 86% at 50% 33%, #0f3728 0%, #0a2419 60%, #06160f 100%);
+}
+:root[data-theme="dark"] .arena {
+  background: radial-gradient(105% 86% at 50% 33%, #0b2a1e 0%, #071811 60%, #040d09 100%);
 }
 /* Absolutely sized + centered inside the arena so it can never overflow into
    the topbar or footer, regardless of flex quirks. */
