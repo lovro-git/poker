@@ -287,7 +287,7 @@ class HostClient implements Client {
 
     if (!this.progressScheduled && s.stage === "showdown") {
       this.progressScheduled = true;
-      setTimeout(() => this.nextHand(), 10000);
+      setTimeout(() => this.nextHand(), 7000);
     }
 
     // TEST room: auto-deal and drive the bots.

@@ -5,7 +5,6 @@ import type { TableConfig } from "./engine/types";
 import { createGuest, createHost, resumeHost, type Client, type Identity } from "./net/room";
 import type { ClientView } from "./net/protocol";
 import { renderConnecting, renderLobby, renderTable, type TableHandlers, type UIState } from "./ui/screens";
-import { play as playSfx } from "./ui/sound";
 
 const root = document.getElementById("app")!;
 
@@ -56,18 +55,8 @@ function toast(text: string) {
   setTimeout(() => t.remove(), 2000);
 }
 
-let suppressActionSfx = false;
-
 const handlers: TableHandlers = {
-  act: (a) => {
-    // Play our own action immediately — the incoming view diff can't reliably
-    // attribute the change to us, so local feedback needs a direct cue.
-    if (a.type === "fold") playSfx("fold");
-    else if (a.type === "check") playSfx("check");
-    else playSfx("chip"); // call / raise
-    suppressActionSfx = true; // don't double up when our own view echoes back
-    client?.act(a);
-  },
+  act: (a) => client?.act(a),
   rebuy: () => client?.rebuy(),
   sitOut: (v) => client?.sitOut(v),
   show: (v) => client?.show(v),
@@ -125,7 +114,6 @@ function startClient(newClient: Client, roomKey: string) {
       ui.turnKey = turnKey;
       if (v.toActSeat === v.yourSeat) ui.raiseTo = 0;
     }
-    soundForView(view, v);
     view = v;
     renderTable(root, v, ui, handlers);
   });
@@ -134,50 +122,12 @@ function startClient(newClient: Client, roomKey: string) {
   clockTimer = setInterval(tickClock, 250);
 }
 
-/** Fire a sound effect for whatever changed between two consecutive views. */
-function soundForView(prev: ClientView | null, v: ClientView) {
-  if (!prev) return;
-  if (v.handNumber !== prev.handNumber) {
-    playSfx("deal"); // new hand — shuffle/deal
-  } else if (v.board.length > prev.board.length) {
-    playSfx("card"); // flop/turn/river opening
-  } else if (!suppressActionSfx) {
-    // Another player's action: distinguish all-in / fold / bet / check.
-    const changed = (st: string) => v.seats.some((s, i) => s && s.status === st && prev.seats[i]?.status !== st);
-    if (changed("allin")) playSfx("allin");
-    else if (changed("folded")) playSfx("fold");
-    else if (v.pot > prev.pot) playSfx("chip"); // call / bet / raise
-    else if (v.toActSeat !== prev.toActSeat && v.stage === prev.stage && v.stage !== "showdown") playSfx("check"); // knock
-  }
-  suppressActionSfx = false; // only skips the immediate echo of our own action
-
-  if (v.stage === "showdown" && prev.stage !== "showdown") {
-    const iWon = v.yourSeat >= 0 && !!v.result?.pots.some((p) => p.winners.includes(v.yourSeat));
-    playSfx(iWon ? "win" : "reveal");
-  }
-  // Your turn just started — a gentle alert regardless of what else changed.
-  if (v.stage !== "showdown" && v.toActSeat >= 0 && v.toActSeat === v.yourSeat && prev.toActSeat !== v.yourSeat) {
-    playSfx("turn");
-  }
-}
-
-let lastWarnSec = -1;
-
 function tickClock() {
   if (!view || view.actDeadline == null || view.stage === "showdown") return;
   const remaining = view.actDeadline - Date.now();
   const secs = Math.max(0, Math.ceil(remaining / 1000));
   const el = document.querySelector(".clock-num");
   if (el) el.textContent = `${secs}s`;
-  // Countdown tick over the final 5 seconds of your own turn.
-  if (view.toActSeat === view.yourSeat && secs > 0 && secs <= 5) {
-    if (lastWarnSec !== secs) {
-      lastWarnSec = secs;
-      playSfx("tick");
-    }
-  } else {
-    lastWarnSec = -1;
-  }
   // Drive the avatar's shot-clock ring on the acting pod.
   const total = (view.config.shotClockSec || 45) * 1000;
   const frac = Math.max(0, Math.min(1, remaining / total));
