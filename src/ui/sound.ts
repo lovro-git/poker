@@ -13,20 +13,21 @@ import cardShove3 from "../assets/sfx/card-shove-3.ogg";
 import chipLay1 from "../assets/sfx/chip-lay-1.ogg";
 import chipsStack2 from "../assets/sfx/chips-stack-2.ogg";
 import chipsStack4 from "../assets/sfx/chips-stack-4.ogg";
-import chipsHandle2 from "../assets/sfx/chips-handle-2.ogg";
 import chipsCollide1 from "../assets/sfx/chips-collide-1.ogg";
 
-export type Sfx = "deal" | "card" | "chip" | "check" | "fold" | "turn" | "win" | "reveal";
+export type Sfx = "deal" | "card" | "chip" | "check" | "fold" | "turn" | "win" | "reveal" | "allin" | "tick";
+// Sample-backed events (check = synth knock, turn/tick = synth cues).
+type SampleSfx = "deal" | "card" | "chip" | "fold" | "win" | "reveal" | "allin";
 
 // Each event maps to one or more real samples (a random variant plays) + a gain.
-const EVENTS: Record<Exclude<Sfx, "turn">, { urls: string[]; gain: number }> = {
+const EVENTS: Record<SampleSfx, { urls: string[]; gain: number }> = {
   deal: { urls: [cardShuffle], gain: 0.55 },
   card: { urls: [cardSlide1, cardSlide3, cardPlace2], gain: 0.8 },
   chip: { urls: [chipsStack2, chipLay1, chipsStack4], gain: 0.9 },
-  check: { urls: [chipsHandle2], gain: 0.5 },
   fold: { urls: [cardShove1, cardShove3], gain: 0.75 },
   win: { urls: [chipsCollide1], gain: 1.0 },
   reveal: { urls: [cardSlide5], gain: 0.6 },
+  allin: { urls: [chipsCollide1, chipsStack4], gain: 1.0 },
 };
 const ALL_URLS = [...new Set(Object.values(EVENTS).flatMap((e) => e.urls))];
 
@@ -110,15 +111,71 @@ function chime(): void {
   }
 }
 
+/** A wooden double-knock — the classic "check" gesture on the table. */
+function knock(): void {
+  const c = ac();
+  const now = c.currentTime;
+  const rap = (t: number) => {
+    // Low resonant "thock".
+    const o = c.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(185, t);
+    o.frequency.exponentialRampToValueAtTime(85, t + 0.06);
+    const g = c.createGain();
+    o.connect(g);
+    g.connect(c.destination);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.5, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    o.start(t);
+    o.stop(t + 0.11);
+    // Knuckle click transient.
+    const n = Math.floor(c.sampleRate * 0.02);
+    const buf = c.createBuffer(1, n, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1700;
+    const ng = c.createGain();
+    ng.gain.value = 0.22;
+    src.connect(bp);
+    bp.connect(ng);
+    ng.connect(c.destination);
+    src.start(t);
+    src.stop(t + 0.03);
+  };
+  rap(now);
+  rap(now + 0.12);
+}
+
+/** A soft high tick — shot-clock countdown warning. */
+function tick(): void {
+  const c = ac();
+  const t = c.currentTime;
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = "square";
+  o.frequency.value = 1500;
+  o.connect(g);
+  g.connect(c.destination);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.08, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+  o.start(t);
+  o.stop(t + 0.08);
+}
+
 export function play(name: Sfx): void {
   if (muted) return;
   try {
     void ac().resume?.();
-    if (name === "turn") {
-      chime();
-      return;
-    }
-    const ev = EVENTS[name];
+    if (name === "turn") return chime();
+    if (name === "check") return knock();
+    if (name === "tick") return tick();
+    const ev = EVENTS[name as SampleSfx];
     if (!ev) return;
     const url = ev.urls[Math.floor(Math.random() * ev.urls.length)];
     const buf = buffers.get(url);

@@ -127,10 +127,18 @@ function startClient(newClient: Client, roomKey: string) {
 /** Fire a sound effect for whatever changed between two consecutive views. */
 function soundForView(prev: ClientView | null, v: ClientView) {
   if (!prev) return;
-  if (v.handNumber !== prev.handNumber) playSfx("deal");
-  else if (v.board.length > prev.board.length) playSfx("card");
-  else if (v.pot > prev.pot) playSfx("chip");
-  else if (v.toActSeat !== prev.toActSeat && v.stage === prev.stage && v.stage !== "showdown") playSfx("check");
+  if (v.handNumber !== prev.handNumber) {
+    playSfx("deal"); // new hand — shuffle/deal
+  } else if (v.board.length > prev.board.length) {
+    playSfx("card"); // flop/turn/river opening
+  } else {
+    // A single player's action: distinguish all-in / fold / bet / check.
+    const changed = (st: string) => v.seats.some((s, i) => s && s.status === st && prev.seats[i]?.status !== st);
+    if (changed("allin")) playSfx("allin");
+    else if (changed("folded")) playSfx("fold");
+    else if (v.pot > prev.pot) playSfx("chip"); // call / bet / raise
+    else if (v.toActSeat !== prev.toActSeat && v.stage === prev.stage && v.stage !== "showdown") playSfx("check"); // knock
+  }
 
   if (v.stage === "showdown" && prev.stage !== "showdown") {
     const iWon = v.yourSeat >= 0 && !!v.result?.pots.some((p) => p.winners.includes(v.yourSeat));
@@ -142,12 +150,23 @@ function soundForView(prev: ClientView | null, v: ClientView) {
   }
 }
 
+let lastWarnSec = -1;
+
 function tickClock() {
   if (!view || view.actDeadline == null || view.stage === "showdown") return;
   const remaining = view.actDeadline - Date.now();
   const secs = Math.max(0, Math.ceil(remaining / 1000));
   const el = document.querySelector(".clock-num");
   if (el) el.textContent = `${secs}s`;
+  // Countdown tick over the final 5 seconds of your own turn.
+  if (view.toActSeat === view.yourSeat && secs > 0 && secs <= 5) {
+    if (lastWarnSec !== secs) {
+      lastWarnSec = secs;
+      playSfx("tick");
+    }
+  } else {
+    lastWarnSec = -1;
+  }
   // Drive the avatar's shot-clock ring on the acting pod.
   const total = (view.config.shotClockSec || 45) * 1000;
   const frac = Math.max(0, Math.min(1, remaining / total));
