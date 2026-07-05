@@ -230,7 +230,7 @@ function seatCoords(relPos: number, total: number): { left: number; top: number 
   // Push seats wider to the rail as the table fills up, so they spread out.
   const many = total >= 7;
   const cx = 50, cy = 50, rx = many ? 49 : 46, ry = many ? 46 : 43;
-  const left = Math.max(8, Math.min(92, cx + rx * Math.cos(angle)));
+  const left = Math.max(12, Math.min(88, cx + rx * Math.cos(angle)));
   const top = Math.max(12, Math.min(87, cy + ry * Math.sin(angle)));
   return { left, top };
 }
@@ -302,7 +302,7 @@ function seatPod(view: ClientView, i: number, winSet: Set<Card>, animHole: boole
       !seat.connected ? h("span", { class: "av-off", title: "Disconnected" }) : null,
     ),
     h("div", { class: "plate-txt" },
-      h("div", { class: "pod-name" }, seat.name + (isMe ? " (you)" : "")),
+      h("div", { class: "pod-name" }, seat.name),
       h("div", { class: "pod-chips" }, chipDisc(seat.chips), h("span", { class: "tnum" }, chips(seat.chips))),
     ),
     badge ? h("span", { class: `pod-btn ${badge}` }, badge.toUpperCase()) : null,

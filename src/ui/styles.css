@@ -684,7 +684,7 @@ input:focus-visible {
 .arena[data-seats="8"] {
   --av-size: clamp(38px, 5vw, 58px);
   --card-sm-w: clamp(24px, 3.6vw, 38px);
-  --card-board-w: clamp(36px, 4.8vw, 62px);
+  --card-board-w: clamp(32px, 4.4vw, 54px);
 }
 /* --- Nameplate seat pod: solid capsule (avatar + name/stack), cards behind --- */
 .avatar-pod {
@@ -845,7 +845,7 @@ input:focus-visible {
 }
 .arena[data-seats="7"] .pod-name,
 .arena[data-seats="8"] .pod-name {
-  max-width: calc(var(--av-size) * 1.5);
+  max-width: calc(var(--av-size) * 1.2);
 }
 .arena[data-seats="7"] .plate,
 .arena[data-seats="8"] .plate {
