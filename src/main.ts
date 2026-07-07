@@ -4,7 +4,7 @@ import { defaultConfig } from "./engine/game";
 import type { TableConfig } from "./engine/types";
 import { createGuest, createHost, resumeHost, type Client, type Identity } from "./net/room";
 import type { ClientView } from "./net/protocol";
-import { renderConnecting, renderLobby, renderTable, type TableHandlers, type UIState } from "./ui/screens";
+import { renderConnecting, renderJoin, renderLobby, renderTable, type TableHandlers, type UIState } from "./ui/screens";
 import { play as playSfx } from "./ui/sound";
 
 const root = document.getElementById("app")!;
@@ -233,8 +233,10 @@ function boot() {
   if (me.name && me.name !== "Player") {
     startClient(createGuest(room, { playerId: me.playerId, name: me.name }), room);
   } else {
-    // Need a name first — show the lobby with the key prefilled.
-    showLobby("");
+    // Arriving via an invite link with no name yet — ask only for a name.
+    renderJoin(root, room, "", (name) => {
+      startClient(createGuest(room, { playerId: me.playerId, name }), room);
+    });
   }
 }
 

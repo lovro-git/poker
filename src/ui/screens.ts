@@ -103,6 +103,46 @@ export function renderLobby(root: HTMLElement, initialKey: string, err: string, 
   if (!savedName) nameInput.focus();
 }
 
+// --- Join (arriving via an invite link — ask for a name only) --------------
+
+export function renderJoin(root: HTMLElement, roomKey: string, err: string, onJoin: (name: string) => void): void {
+  const nameInput = h("input", {
+    class: "input",
+    placeholder: "e.g. Alex",
+    value: localStorage.getItem("holdem:name") ?? "",
+    maxlength: 20,
+  }) as HTMLInputElement;
+  const errEl = h("div", { class: "err" }, err);
+  const submit = () => {
+    const name = nameInput.value.trim();
+    if (!name) { errEl.textContent = "Enter a display name first."; return; }
+    localStorage.setItem("holdem:name", name);
+    onJoin(name);
+  };
+  nameInput.addEventListener("keydown", (e) => {
+    if ((e as KeyboardEvent).key === "Enter") submit();
+  });
+  const joinBtn = h("button", { class: "btn btn-gold btn-join", type: "button" }, "Join room");
+  joinBtn.onclick = submit;
+
+  clear(root).append(
+    h("div", { class: "lobby" },
+      h("div", { class: "lobby-card" },
+        h("div", { class: "lobby-top" },
+          h("span", { class: "suits" }, h("span", {}, "♠"), h("span", { class: "r" }, "♥"), h("span", { class: "r" }, "♦"), h("span", {}, "♣")),
+          h("span", { class: "brand-spacer" }),
+          themeToggle("icon-btn"),
+        ),
+        h("p", { class: "lobby-sub" }, `Joining room · ${roomKey}`),
+        h("div", { class: "field" }, h("label", {}, "Your name"), nameInput),
+        joinBtn,
+        errEl,
+      ),
+    ),
+  );
+  nameInput.focus();
+}
+
 // --- Connecting (guest, before first state arrives) ------------------------
 
 export function renderConnecting(root: HTMLElement, roomKey: string, onLeave: () => void, slow = false): void {
